@@ -60,7 +60,7 @@ To prevent dark halo artifacts around transparent cutouts, RGB channels are pre-
 ### 2. Structure Tensor & Tangent Flow Field
 From the smoothed luminance $L_s = 0.3R + 0.59G + 0.11B$, central differences yield the gradient tensor components:
 
-$$J_{11} = g_x^2, \quad J_{22} = g_y^2, \quad J_{12} = g_x g_y, \quad E = \sqrt{g_x^2 + g_y^2}$$
+$$\theta = \frac{1}{2} \mathrm{atan2}(2 S_{12}, S_{11} - S_{22}), \qquad c = \frac{\sqrt{(S_{11} - S_{22})^2 + 4 S_{12}^2}}{S_{11} + S_{22} + \epsilon}$$
 
 Each component is smoothed twice with a radius-3 box blur to form $S_{11}, S_{22}, S_{12}$. The local orientation angle $\theta$ and anisotropy coherence $c \in [0, 1]$ are computed as:
 
