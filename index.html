@@ -1,0 +1,2308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bloom &amp; Brushstroke — Procedural Portrait &amp; Letter Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,500;1,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050304;
+    --gold: #f6d79e;
+    --rose: #f4b8d0;
+    --ivory: #f1dfc9;
+  }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: #050304;
+    overflow: hidden;
+    font-family: Georgia, serif;
+    color: #f4e8dc;
+    -webkit-font-smoothing: antialiased;
+  }
+  canvas#view {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    z-index: 1;
+  }
+
+  /* ---------- Bottom Caption & Actions ---------- */
+  #cap {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: max(20px, env(safe-area-inset-bottom));
+    text-align: center;
+    padding: 0 20px;
+    opacity: 0;
+    transition: opacity 2.6s ease;
+    pointer-events: none;
+    z-index: 5;
+  }
+  #cap.on { opacity: 1; }
+  #cap::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -20px;
+    height: 190%;
+    z-index: -1;
+    background: linear-gradient(to top, rgba(5,3,4,.94) 0%, rgba(5,3,4,.72) 45%, rgba(5,3,4,0) 100%);
+  }
+
+  /* Theme 1: Royal Gold & Rose (Riya5 style) */
+  body[data-theme="royal"] #cap h1 {
+    margin: 0;
+    font: italic 500 clamp(24px, 4vw, 44px)/1.15 "Cormorant Garamond", "Playfair Display", Georgia, serif;
+    letter-spacing: .01em;
+    background: linear-gradient(100deg, #f6d79e 0%, #ffeccf 38%, #f4b8d0 72%, #f6d79e 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 0 16px rgba(255, 180, 140, .35));
+  }
+  body[data-theme="royal"] #messageBtn {
+    pointer-events: auto;
+    border: 1px solid rgba(246,215,158,.48);
+    border-radius: 999px;
+    padding: 8px 16px;
+    cursor: pointer;
+    background: rgba(38,16,27,.64);
+    color: #f6d79e;
+    font: 500 10px/1 Georgia, serif;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    box-shadow: 0 0 18px rgba(246,200,76,.10);
+    transition: .25s ease;
+    backdrop-filter: blur(8px);
+  }
+  body[data-theme="royal"] #messageBtn:hover {
+    color: #fff0ce;
+    border-color: rgba(255,226,170,.9);
+    box-shadow: 0 0 24px rgba(246,200,76,.25);
+  }
+  body[data-theme="royal"] #sig {
+    pointer-events: auto;
+    margin: 0;
+    padding: 8px 4px;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    font: 500 10px/1 Georgia, serif;
+    letter-spacing: .28em;
+    text-transform: uppercase;
+    color: rgba(246,215,158,.62);
+    transition: color .25s;
+  }
+  body[data-theme="royal"] #sig:hover { color: #ffe9bd; }
+
+  /* Theme 2: Editorial Ivory (For_Shreya style) */
+  body[data-theme="ivory"] #cap h1 {
+    margin: 0;
+    color: #f1dfc9;
+    font: italic 500 clamp(26px, 4.1vw, 44px)/1.14 "Cormorant Garamond", Georgia, serif;
+    letter-spacing: .015em;
+    text-shadow: 0 2px 24px rgba(0,0,0,.28);
+  }
+  body[data-theme="ivory"] #messageBtn {
+    pointer-events: auto;
+    border: 1px solid rgba(232,211,187,.42);
+    border-radius: 2px;
+    padding: 10px 15px;
+    cursor: pointer;
+    background: rgba(20,12,15,.48);
+    color: #ead7bf;
+    font: 500 10px/1 Georgia, serif;
+    letter-spacing: .19em;
+    text-transform: uppercase;
+    transition: background .25s ease, border-color .25s ease, color .25s ease;
+    backdrop-filter: blur(6px);
+  }
+  body[data-theme="ivory"] #messageBtn:hover {
+    color: #fff7ed;
+    border-color: rgba(255,239,218,.78);
+    background: rgba(42,23,28,.72);
+  }
+  body[data-theme="ivory"] #sig {
+    pointer-events: auto;
+    margin: 0;
+    padding: 8px 4px;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    font: 500 10px/1 Georgia, serif;
+    letter-spacing: .20em;
+    text-transform: uppercase;
+    color: rgba(234,215,191,.68);
+    transition: color .25s;
+  }
+  body[data-theme="ivory"] #sig:hover { color: #ffe9bd; }
+
+  .cap-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 18px;
+    margin-top: 10px;
+  }
+
+  /* ---------- Letter Modal Overlay ---------- */
+  #overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(4,2,5,.72);
+    backdrop-filter: blur(7px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .4s ease;
+  }
+  #overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .card {
+    width: min(440px, 100%);
+    max-height: 86vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+    padding: 28px 25px 22px;
+    border-radius: 18px;
+    transform: translateY(12px) scale(.98);
+    transition: transform .4s ease;
+  }
+  #overlay.open .card {
+    transform: translateY(0) scale(1);
+  }
+  body[data-theme="royal"] .card {
+    color: #f4e8dc;
+    background: linear-gradient(145deg, rgba(31,13,23,.97), rgba(12,8,15,.97));
+    border: 1px solid rgba(246,215,158,.42);
+    box-shadow: 0 18px 60px rgba(0,0,0,.72), 0 0 36px rgba(239,164,180,.12);
+  }
+  body[data-theme="ivory"] .card {
+    color: #f1e8df;
+    background: rgba(24,17,19,.97);
+    border: 1px solid rgba(226,207,187,.30);
+    box-shadow: 0 22px 70px rgba(0,0,0,.58);
+  }
+  .card h2 {
+    margin: 0 0 15px;
+    font: italic 500 31px/1.1 "Cormorant Garamond", Georgia, serif;
+  }
+  body[data-theme="royal"] .card h2 { color: #f6d79e; }
+  body[data-theme="ivory"] .card h2 { color: #ead5bd; }
+
+  .card p {
+    margin: 0 0 13px;
+    font: 14px/1.7 Georgia, serif;
+    color: #e9ded5;
+  }
+  .card .flowers-note {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,.10);
+    color: #d6b7ad;
+    font: italic 13px/1.6 "Cormorant Garamond", Georgia, serif;
+  }
+  .card .signoff {
+    margin-top: 6px;
+    text-align: right;
+    font: italic 15px Georgia, serif;
+  }
+  body[data-theme="royal"] .card .signoff { color: #f6d79e; }
+  body[data-theme="ivory"] .card .signoff { color: #ead5bd; }
+
+  .actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .btn {
+    padding: 8px 15px;
+    cursor: pointer;
+    font: 11px Georgia, serif;
+    transition: .2s ease;
+  }
+  body[data-theme="royal"] .btn {
+    border: 1px solid rgba(246,215,158,.38);
+    border-radius: 999px;
+    background: rgba(255,255,255,.045);
+    color: #f0e1d5;
+  }
+  body[data-theme="royal"] .btn:hover {
+    background: rgba(246,200,76,.14);
+    border-color: rgba(246,215,158,.8);
+    color: #fff1ce;
+  }
+  body[data-theme="ivory"] .btn {
+    border: 1px solid rgba(226,207,187,.30);
+    border-radius: 2px;
+    background: rgba(255,255,255,.035);
+    color: #e9ddd2;
+  }
+  body[data-theme="ivory"] .btn:hover {
+    background: rgba(226,207,187,.10);
+    border-color: rgba(226,207,187,.65);
+    color: #fff7ed;
+  }
+
+  /* ---------- Studio Top Bar & Drawer ---------- */
+  #studioTopBar {
+    position: fixed;
+    top: max(14px, env(safe-area-inset-top));
+    right: 16px;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: opacity .3s ease;
+  }
+  .studio-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border: 1px solid rgba(246,215,158,.35);
+    border-radius: 999px;
+    padding: 8px 14px;
+    background: rgba(18,10,15,.78);
+    color: #f6d79e;
+    font: 500 11px/1 "Inter", sans-serif;
+    letter-spacing: .04em;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 24px rgba(0,0,0,.45);
+    transition: all .2s ease;
+    text-decoration: none;
+  }
+  .studio-pill:hover {
+    background: rgba(38,18,28,.92);
+    border-color: rgba(246,215,158,.8);
+    color: #fff3d6;
+    transform: translateY(-1px);
+  }
+  .studio-pill.primary {
+    background: linear-gradient(135deg, rgba(246,215,158,.22), rgba(244,184,208,.18));
+    border-color: rgba(246,215,158,.65);
+  }
+  .progress-badge {
+    font-variant-numeric: tabular-nums;
+    font-size: 10px;
+    color: rgba(246,215,158,.75);
+    padding: 6px 11px;
+    border-radius: 999px;
+    background: rgba(14,8,12,.68);
+    border: 1px solid rgba(255,255,255,.08);
+    backdrop-filter: blur(8px);
+    font-family: "Inter", sans-serif;
+  }
+
+  #studioDrawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(410px, 100vw);
+    z-index: 40;
+    background: rgba(14, 9, 13, 0.96);
+    border-left: 1px solid rgba(246, 215, 158, 0.25);
+    box-shadow: -20px 0 60px rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(16px);
+    display: flex;
+    flex-direction: column;
+    transform: translateX(102%);
+    transition: transform .35s cubic-bezier(0.16, 1, 0.3, 1);
+    font-family: "Inter", sans-serif;
+  }
+  #studioDrawer.open {
+    transform: translateX(0);
+  }
+  .drawer-header {
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .drawer-header h3 {
+    margin: 0;
+    font: italic 600 22px/1.1 "Cormorant Garamond", Georgia, serif;
+    color: #f6d79e;
+  }
+  .drawer-header span {
+    display: block;
+    font: 400 11px/1.3 "Inter", sans-serif;
+    color: rgba(244,232,220,.55);
+    margin-top: 2px;
+  }
+  .close-drawer {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.12);
+    color: #f4e8dc;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: .2s;
+  }
+  .close-drawer:hover {
+    background: rgba(246,215,158,.2);
+    border-color: rgba(246,215,158,.6);
+  }
+
+  .drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 20px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .drawer-body::-webkit-scrollbar { width: 5px; }
+  .drawer-body::-webkit-scrollbar-thumb { background: rgba(246,215,158,.25); border-radius: 99px; }
+
+  .studio-section {
+    background: rgba(255,255,255,.025);
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 12px;
+    padding: 14px 15px;
+  }
+  .studio-section-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: #f6d79e;
+    margin: 0 0 11px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* Photo Dropzone */
+  .dropzone {
+    border: 1.5px dashed rgba(246,215,158,.4);
+    border-radius: 10px;
+    padding: 16px 12px;
+    text-align: center;
+    cursor: pointer;
+    background: rgba(246,215,158,.03);
+    transition: .2s ease;
+    position: relative;
+  }
+  .dropzone:hover, .dropzone.dragover {
+    background: rgba(246,215,158,.09);
+    border-color: rgba(246,215,158,.85);
+  }
+  .dropzone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+  .dropzone-title {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #f6d79e;
+    margin-bottom: 4px;
+  }
+  .dropzone-sub {
+    font-size: 11px;
+    color: rgba(244,232,220,.58);
+    line-height: 1.4;
+  }
+
+  .preset-row {
+    display: flex;
+    gap: 7px;
+    margin-top: 10px;
+  }
+  .mini-btn {
+    flex: 1;
+    padding: 7px 9px;
+    border-radius: 7px;
+    border: 1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.04);
+    color: #e9ded5;
+    font: 500 11px/1.2 "Inter", sans-serif;
+    cursor: pointer;
+    transition: .2s;
+  }
+  .mini-btn:hover, .mini-btn.active {
+    background: rgba(246,215,158,.18);
+    border-color: rgba(246,215,158,.65);
+    color: #fff2d4;
+  }
+
+  /* Form Controls */
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 11px;
+  }
+  .field-group:last-child { margin-bottom: 0; }
+  .field-label {
+    font-size: 11px;
+    color: rgba(244,232,220,.75);
+    display: flex;
+    justify-content: space-between;
+  }
+  .field-input, .field-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(0,0,0,.38);
+    border: 1px solid rgba(255,255,255,.13);
+    border-radius: 7px;
+    padding: 8px 10px;
+    color: #f8efe6;
+    font: 12.5px/1.4 "Inter", sans-serif;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .field-input:focus, .field-textarea:focus {
+    border-color: rgba(246,215,158,.75);
+  }
+  .field-textarea {
+    resize: vertical;
+    min-height: 92px;
+    line-height: 1.55;
+  }
+
+  .slider-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .slider-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .slider-item label {
+    font-size: 10.5px;
+    color: rgba(244,232,220,.72);
+    display: flex;
+    justify-content: space-between;
+  }
+  .slider-item input[type="range"] {
+    width: 100%;
+    accent-color: #f6d79e;
+    cursor: pointer;
+  }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11.5px;
+    color: rgba(244,232,220,.85);
+    margin-top: 10px;
+    padding-top: 9px;
+    border-top: 1px solid rgba(255,255,255,.06);
+  }
+  .toggle-row input[type="checkbox"] {
+    accent-color: #f6d79e;
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+  }
+
+  .drawer-footer {
+    padding: 14px 20px;
+    border-top: 1px solid rgba(255,255,255,.08);
+    background: rgba(10,6,9,.95);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .action-btn {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font: 600 12px/1.2 "Inter", sans-serif;
+    cursor: pointer;
+    transition: .2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .action-btn.replay {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(246,215,158,.35);
+    color: #f6d79e;
+  }
+  .action-btn.replay:hover {
+    background: rgba(246,215,158,.15);
+    border-color: rgba(246,215,158,.75);
+  }
+  .action-btn.export {
+    background: linear-gradient(135deg, #f6d79e 0%, #e7b872 50%, #f4b8d0 100%);
+    border: none;
+    color: #1a0b12;
+    box-shadow: 0 4px 20px rgba(246,215,158,.28);
+  }
+  .action-btn.export:hover {
+    filter: brightness(1.07);
+    box-shadow: 0 6px 26px rgba(246,215,158,.42);
+    transform: translateY(-1px);
+  }
+
+  /* Toast Notification */
+  #toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    z-index: 60;
+    background: rgba(25, 13, 20, 0.95);
+    border: 1px solid rgba(246, 215, 158, 0.6);
+    color: #ffeccf;
+    padding: 10px 18px;
+    border-radius: 999px;
+    font: 500 12px/1.3 "Inter", sans-serif;
+    box-shadow: 0 12px 32px rgba(0,0,0,.6);
+    opacity: 0;
+    pointer-events: none;
+    transition: all .3s ease;
+  }
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  @media (max-width: 520px) {
+    .card { padding: 24px 20px 19px; }
+    .card p { font-size: 13px; }
+    .cap-actions { gap: 12px; }
+    #messageBtn { letter-spacing: .14em; padding: 8px 12px; }
+    #studioTopBar { left: 12px; right: 12px; justify-content: space-between; }
+  }
+</style>
+</head>
+<body data-theme="royal">
+
+<canvas id="view"></canvas>
+
+<!-- Top Studio Bar (stripped out when exporting standalone gift HTML) -->
+<div id="studioTopBar">
+  <span class="progress-badge" id="paintStatus">Painting · 0%</span>
+  <div style="display:flex; gap:8px;">
+    <button class="studio-pill" id="fastFinishBtn" type="button" title="Complete painting immediately">⚡ Instant Bloom</button>
+    <button class="studio-pill primary" id="openStudioBtn" type="button">✨ Customize Gift Studio</button>
+  </div>
+</div>
+
+<!-- Artwork Bottom Caption & Letter Triggers -->
+<div id="cap">
+  <h1 id="line">The cutest and most beautiful person ever</h1>
+  <div class="cap-actions">
+    <button id="messageBtn" type="button">A Little Note · For You</button>
+    <button id="sig" type="button" title="paint again">Bloom Again ↻</button>
+  </div>
+</div>
+
+<!-- Personalized Letter Modal -->
+<div id="overlay" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="card">
+    <h2 id="letterHeading">dear muse,</h2>
+    <div id="letterBodyContainer">
+      <p>
+        Some people have a way of making the world feel a little softer and brighter just by being in it.
+        Your warmth, your kindness, and all the little moments that make you who you are mean more than words can easily capture.
+      </p>
+      <p>
+        May every stroke of light in this portrait remind you how deeply you are appreciated, and may the days ahead bring you endless peace, laughter, and a thousand little reasons to smile.
+      </p>
+    </div>
+    <div class="flowers-note" id="letterFlowers">
+      sunflowers, lotus, parijat &amp; white camellias — a little piece of art, blooming just for you.
+    </div>
+    <div class="signoff" id="letterSignoff">— with love</div>
+    <div class="actions">
+      <button class="btn" id="replayBtn" type="button">bloom again</button>
+      <button class="btn" id="closeBtn" type="button">close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Collapsible Studio Drawer -->
+<aside id="studioDrawer" aria-label="Customize Portrait and Letter Studio">
+  <div class="drawer-header">
+    <div>
+      <h3>Bloom &amp; Brushstroke</h3>
+      <span>Procedural Structure-Tensor Portrait &amp; Gift Studio</span>
+    </div>
+    <button class="close-drawer" id="closeStudioBtn" type="button" title="Close Studio">✕</button>
+  </div>
+
+  <div class="drawer-body">
+    <!-- Section 1: Photo Upload & Masking -->
+    <div class="studio-section">
+      <div class="studio-section-title">
+        <span>1. Portrait Photograph</span>
+        <span id="imgDimLabel" style="font-weight:400; color:rgba(246,215,158,.6);">Default Muse</span>
+      </div>
+      <div class="dropzone" id="dropzone">
+        <input type="file" id="photoInput" accept="image/png,image/jpeg,image/webp">
+        <div class="dropzone-title">📷 Upload Any Portrait Photo</div>
+        <div class="dropzone-sub">Drag &amp; drop or click (PNG cutout, JPG, or WebP).<br>Processed 100% locally in your browser.</div>
+      </div>
+
+      <div class="toggle-row">
+        <label for="vignetteMaskToggle" style="cursor:pointer;">Soft Vignette Cutout (for rectangular photos)</label>
+        <input type="checkbox" id="vignetteMaskToggle">
+      </div>
+
+      <div class="preset-row">
+        <button class="mini-btn active" id="presetMuseBtn" type="button">🎨 Default Muse</button>
+        <button class="mini-btn" id="replayNowBtn" type="button">🔄 Repaint Canvas</button>
+      </div>
+    </div>
+
+    <!-- Section 2: Face Focus Ellipse Calibrator -->
+    <div class="studio-section">
+      <div class="studio-section-title">
+        <span>2. Face Focus Detail Region</span>
+        <label style="font-size:10px; font-weight:400; text-transform:none; display:flex; align-items:center; gap:4px; cursor:pointer;">
+          <input type="checkbox" id="showFaceGuideToggle" style="accent-color:#f6d79e;"> Show Guide Ring
+        </label>
+      </div>
+      <div style="font-size:11px; color:rgba(244,232,220,.6); margin-bottom:10px; line-height:1.4;">
+        Layer 6 concentrates fine micro-strokes and blends lifelike facial clarity inside this ellipse:
+      </div>
+      <div class="slider-grid">
+        <div class="slider-item">
+          <label><span>Center X</span><span id="valFaceX">50%</span></label>
+          <input type="range" id="faceXSlider" min="15" max="85" value="50">
+        </div>
+        <div class="slider-item">
+          <label><span>Center Y</span><span id="valFaceY">32%</span></label>
+          <input type="range" id="faceYSlider" min="10" max="80" value="32">
+        </div>
+        <div class="slider-item">
+          <label><span>Radius X</span><span id="valFaceRX">16%</span></label>
+          <input type="range" id="faceRXSlider" min="6" max="40" value="16">
+        </div>
+        <div class="slider-item">
+          <label><span>Radius Y</span><span id="valFaceRY">18%</span></label>
+          <input type="range" id="faceRYSlider" min="6" max="45" value="18">
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Aesthetic Theme -->
+    <div class="studio-section">
+      <div class="studio-section-title"><span>3. Visual Theme</span></div>
+      <div class="preset-row" style="margin-top:0;">
+        <button class="mini-btn active" id="themeRoyalBtn" type="button">✨ Royal Gold &amp; Rose</button>
+        <button class="mini-btn" id="themeIvoryBtn" type="button">🤍 Editorial Ivory</button>
+      </div>
+    </div>
+
+    <!-- Section 4: Caption & Personalized Letter -->
+    <div class="studio-section">
+      <div class="studio-section-title"><span>4. Personalized Letter &amp; Captions</span></div>
+
+      <div class="field-group">
+        <label class="field-label">Page &amp; Gift Title</label>
+        <input type="text" class="field-input" id="inputPageTitle" value="A bouquet in brushstrokes">
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Portrait Bottom Caption</label>
+        <input type="text" class="field-input" id="inputCaption" value="The cutest and most beautiful person ever">
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:11px;">
+        <div class="field-group" style="margin-bottom:0;">
+          <label class="field-label">Note Button Label</label>
+          <input type="text" class="field-input" id="inputMsgBtn" value="A Little Note · For You">
+        </div>
+        <div class="field-group" style="margin-bottom:0;">
+          <label class="field-label">Replay Button Label</label>
+          <input type="text" class="field-input" id="inputSigBtn" value="Bloom Again ↻">
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Letter Salutation</label>
+        <input type="text" class="field-input" id="inputSalutation" value="dear muse,">
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Letter Paragraphs (separate paragraphs with a blank line)</label>
+        <textarea class="field-textarea" id="inputLetterBody">Some people have a way of making the world feel a little softer and brighter just by being in it. Your warmth, your kindness, and all the little moments that make you who you are mean more than words can easily capture.
+
+May every stroke of light in this portrait remind you how deeply you are appreciated, and may the days ahead bring you endless peace, laughter, and a thousand little reasons to smile.</textarea>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Botanical / Flowers Note</label>
+        <input type="text" class="field-input" id="inputFlowersNote" value="sunflowers, lotus, parijat & white camellias — a little piece of art, blooming just for you.">
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Sign-off</label>
+        <input type="text" class="field-input" id="inputSignoff" value="— with love">
+      </div>
+    </div>
+  </div>
+
+  <div class="drawer-footer">
+    <button class="action-btn replay" id="applyAndReplayBtn" type="button">🎨 Apply Changes &amp; Replay Painting</button>
+    <button class="action-btn export" id="exportGiftBtn" type="button">🎁 Export Standalone Gift HTML</button>
+  </div>
+</aside>
+
+<div id="toast">Standalone Gift HTML exported!</div>
+
+<script>
+"use strict";
+
+/* ============================================================================
+   1. PROCEDURAL DEFAULT PORTRAIT GENERATOR
+   Creates a rich, painterly cutout portrait with golden jewelry & zari highlights
+   so the open-source repo works immediately out of the box with zero personal photos.
+   ============================================================================ */
+function createDefaultMuseDataURL() {
+  const w = 380, h = 500;
+  const cv = document.createElement("canvas");
+  cv.width = w; cv.height = h;
+  const ctx = cv.getContext("2d");
+
+  // Soft ambient halo on alpha silhouette
+  ctx.save();
+
+  // Flowing dark hair back layer
+  const hairGrad = ctx.createLinearGradient(120, 60, 260, 380);
+  hairGrad.addColorStop(0, "#1d1018");
+  hairGrad.addColorStop(0.5, "#12090f");
+  hairGrad.addColorStop(1, "#24131c");
+  ctx.fillStyle = hairGrad;
+  ctx.beginPath();
+  ctx.moveTo(190, 58);
+  ctx.bezierCurveTo(115, 58, 95, 165, 102, 275);
+  ctx.bezierCurveTo(106, 340, 88, 410, 118, 465);
+  ctx.lineTo(265, 465);
+  ctx.bezierCurveTo(290, 400, 278, 320, 282, 250);
+  ctx.bezierCurveTo(286, 150, 262, 58, 190, 58);
+  ctx.closePath();
+  ctx.fill();
+
+  // Shoulders & Royal Crimson/Plum Saree / Drape
+  const dressGrad = ctx.createLinearGradient(80, 270, 300, 495);
+  dressGrad.addColorStop(0, "#7c2344");
+  dressGrad.addColorStop(0.45, "#9e2e56");
+  dressGrad.addColorStop(0.85, "#5a1732");
+  dressGrad.addColorStop(1, "rgba(45, 11, 25, 0)");
+  ctx.fillStyle = dressGrad;
+  ctx.beginPath();
+  ctx.moveTo(135, 258);
+  ctx.bezierCurveTo(82, 278, 52, 345, 44, 488);
+  ctx.lineTo(336, 488);
+  ctx.bezierCurveTo(328, 345, 298, 278, 245, 258);
+  ctx.closePath();
+  ctx.fill();
+
+  // Neck & Collarbone warm skin
+  const neckGrad = ctx.createLinearGradient(165, 200, 215, 290);
+  neckGrad.addColorStop(0, "#c98a6b");
+  neckGrad.addColorStop(0.5, "#e0a587");
+  neckGrad.addColorStop(1, "#b8785a");
+  ctx.fillStyle = neckGrad;
+  ctx.beginPath();
+  ctx.moveTo(164, 212);
+  ctx.quadraticCurveTo(162, 255, 132, 275);
+  ctx.quadraticCurveTo(190, 305, 248, 275);
+  ctx.quadraticCurveTo(218, 255, 216, 212);
+  ctx.closePath();
+  ctx.fill();
+
+  // Diagonal Silk Dupatta / Drape folds with rich texture
+  const drapeGrad = ctx.createLinearGradient(90, 275, 295, 470);
+  drapeGrad.addColorStop(0, "#b33b64");
+  drapeGrad.addColorStop(0.5, "#d45c82");
+  drapeGrad.addColorStop(1, "#6e1c3b");
+  ctx.fillStyle = drapeGrad;
+  ctx.beginPath();
+  ctx.moveTo(122, 268);
+  ctx.bezierCurveTo(165, 315, 245, 360, 322, 455);
+  ctx.lineTo(335, 488);
+  ctx.lineTo(52, 488);
+  ctx.bezierCurveTo(60, 385, 88, 300, 122, 268);
+  ctx.closePath();
+  ctx.fill();
+
+  // Golden Zari Embroidery Borders & Motifs (High Luminance > 0.62 to spawn Golden Dust!)
+  ctx.strokeStyle = "#f9d98c";
+  ctx.lineWidth = 7;
+  ctx.beginPath();
+  ctx.moveTo(118, 272);
+  ctx.bezierCurveTo(175, 325, 248, 370, 320, 462);
+  ctx.stroke();
+
+  ctx.strokeStyle = "#";
+  ctx.strokeStyle = "#ffeab3";
+  ctx.lineWidth = 2.5;
+  ctx.setLineDash([5, 5]);
+  ctx.beginPath();
+  ctx.moveTo(112, 280);
+  ctx.bezierCurveTo(168, 333, 242, 378, 312, 470);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Golden necklace & jhumka earrings (bright pixels outside face ellipse)
+  ctx.strokeStyle = "#fce097";
+  ctx.lineWidth = 4.5;
+  ctx.beginPath();
+  ctx.arc(190, 252, 42, 0.22 * Math.PI, 0.78 * Math.PI);
+  ctx.stroke();
+
+  const goldDots = [
+    [152, 280], [164, 290], [177, 296], [190, 298], [203, 296], [216, 290], [228, 280],
+    [134, 196], [134, 208], [130, 216], [138, 216], // Left Jhumka earring
+    [246, 196], [246, 208], [242, 216], [250, 216], // Right Jhumka earring
+    [105, 345], [145, 380], [195, 415], [235, 435], [125, 425], [168, 355], [260, 345], [280, 390]
+  ];
+  for (const [gx, gy] of goldDots) {
+    const rg = ctx.createRadialGradient(gx, gy, 0, gx, gy, 7);
+    rg.addColorStop(0, "#fff6d6");
+    rg.addColorStop(0.5, "#f5c869");
+    rg.addColorStop(1, "rgba(245,200,105,0)");
+    ctx.fillStyle = rg;
+    ctx.beginPath();
+    ctx.arc(gx, gy, 7, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Face Oval with 3D warm lighting
+  const faceGrad = ctx.createRadialGradient(182, 148, 12, 190, 158, 68);
+  faceGrad.addColorStop(0, "#f5cbb2");
+  faceGrad.addColorStop(0.55, "#e2a688");
+  faceGrad.addColorStop(0.9, "#be7e60");
+  faceGrad.addColorStop(1, "#9b5e44");
+  ctx.fillStyle = faceGrad;
+  ctx.beginPath();
+  ctx.ellipse(190, 156, 50, 64, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Soft rosy cheeks
+  for (const cxPos of [162, 218]) {
+    const cheek = ctx.createRadialGradient(cxPos, 170, 2, cxPos, 170, 20);
+    cheek.addColorStop(0, "rgba(228, 118, 128, 0.42)");
+    cheek.addColorStop(1, "rgba(228, 118, 128, 0)");
+    ctx.fillStyle = cheek;
+    ctx.beginPath();
+    ctx.arc(cxPos, 170, 20, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Eyebrows
+  ctx.strokeStyle = "#2b161e";
+  ctx.lineWidth = 3.2;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(154, 136);
+  ctx.quadraticCurveTo(168, 128, 180, 135);
+  ctx.moveTo(200, 135);
+  ctx.quadraticCurveTo(212, 128, 226, 136);
+  ctx.stroke();
+
+  // Expressive Eyes with catchlights
+  for (const ex of [167, 213]) {
+    // Sclera
+    ctx.fillStyle = "#fdf7f2";
+    ctx.beginPath();
+    ctx.ellipse(ex, 148, 11, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Iris
+    ctx.fillStyle = "#3b2219";
+    ctx.beginPath();
+    ctx.arc(ex, 148, 5.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Pupil
+    ctx.fillStyle = "#12080a";
+    ctx.beginPath();
+    ctx.arc(ex, 148, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Catchlight
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(ex - 1.8, 146.2, 1.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Upper lash line
+    ctx.strokeStyle = "#1a0c11";
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.arc(ex, 150, 11.5, 1.15 * Math.PI, 1.85 * Math.PI);
+    ctx.stroke();
+  }
+
+  // Delicate Bindi
+  ctx.fillStyle = "#8c1d3b";
+  ctx.beginPath();
+  ctx.arc(190, 131, 2.6, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Nose bridge & highlight
+  ctx.strokeStyle = "rgba(155, 92, 68, 0.7)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(190, 144);
+  ctx.lineTo(188, 170);
+  ctx.quadraticCurveTo(190, 174, 195, 171);
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(255, 232, 214, 0.65)";
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(190.5, 146);
+  ctx.lineTo(189.5, 168);
+  ctx.stroke();
+
+  // Warm Smile / Lips
+  ctx.fillStyle = "#c85a68";
+  ctx.beginPath();
+  ctx.moveTo(173, 188);
+  ctx.quadraticCurveTo(183, 182, 190, 186);
+  ctx.quadraticCurveTo(197, 182, 207, 188);
+  ctx.quadraticCurveTo(190, 193, 173, 188);
+  ctx.fill();
+
+  ctx.fillStyle = "#d96b78";
+  ctx.beginPath();
+  ctx.moveTo(173, 188);
+  ctx.quadraticCurveTo(190, 201, 207, 188);
+  ctx.quadraticCurveTo(190, 191, 173, 188);
+  ctx.fill();
+
+  // Front framing hair waves
+  ctx.fillStyle = "#180c13";
+  ctx.beginPath();
+  ctx.moveTo(190, 82);
+  ctx.bezierCurveTo(155, 84, 132, 118, 136, 165);
+  ctx.bezierCurveTo(126, 125, 138, 72, 190, 68);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(190, 82);
+  ctx.bezierCurveTo(225, 84, 248, 118, 244, 165);
+  ctx.bezierCurveTo(254, 125, 242, 72, 190, 68);
+  ctx.closePath();
+  ctx.fill();
+
+  // Fade bottom hem smoothly to transparent so caption rests over it
+  ctx.globalCompositeOperation = "destination-in";
+  const hemFade = ctx.createLinearGradient(0, 0, 0, h);
+  hemFade.addColorStop(0, "rgba(0,0,0,1)");
+  hemFade.addColorStop(0.80, "rgba(0,0,0,1)");
+  hemFade.addColorStop(0.98, "rgba(0,0,0,0)");
+  ctx.fillStyle = hemFade;
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.restore();
+  return cv.toDataURL("image/png");
+}
+
+/* ============================================================================
+   2. CORE MATHEMATICAL PAINTING ENGINE (Preserved from Riya5 / For_Shreya)
+   ============================================================================ */
+let PHOTO_DATA_URI = createDefaultMuseDataURL();
+const K   = 2.2;                         // paint-canvas pixels per photo pixel
+const TAU = Math.PI * 2;
+const clamp = (x, a = 0, b = 1) => (x < a ? a : x > b ? b : x);
+const ease  = (x) => 1 - Math.pow(1 - clamp(x), 3);
+
+// Face region in normalized percentages (0..1) and computed photo pixels
+let faceConfigPct = { x: 0.50, y: 0.315, rx: 0.145, ry: 0.145 };
+let FACE = { x: 190, y: 156, rx: 55, ry: 70 };
+let showFaceGuide = false;
+let useSoftVignetteMask = false;
+
+function rng(seed) {
+  let s = seed >>> 0;
+  return () => {
+    s = (s + 0x6D2B79F5) >>> 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function boxBlur(src, w, h, r) {
+  if (r < 1) return Float32Array.from(src);
+  const tmp = new Float32Array(w * h), out = new Float32Array(w * h), n = 2 * r + 1;
+  for (let y = 0; y < h; y++) {
+    const o = y * w; let acc = 0;
+    for (let x = -r; x <= r; x++) acc += src[o + clamp(x, 0, w - 1)];
+    for (let x = 0; x < w; x++) {
+      tmp[o + x] = acc / n;
+      acc += src[o + Math.min(w - 1, x + r + 1)] - src[o + Math.max(0, x - r)];
+    }
+  }
+  for (let x = 0; x < w; x++) {
+    let acc = 0;
+    for (let y = -r; y <= r; y++) acc += tmp[clamp(y, 0, h - 1) * w + x];
+    for (let y = 0; y < h; y++) {
+      out[y * w + x] = acc / n;
+      acc += tmp[Math.min(h - 1, y + r + 1) * w + x] - tmp[Math.max(0, y - r) * w + x];
+    }
+  }
+  return out;
+}
+
+/**
+ * Normalizes any uploaded image to a consistent working resolution (~480px max dim)
+ * and optionally applies a soft portrait vignette mask if the photo has no alpha cutout.
+ */
+function prepareNormalizedCanvas(rawImg, applyVignette) {
+  const MAX_DIM = 480;
+  let w = rawImg.naturalWidth || rawImg.width;
+  let h = rawImg.naturalHeight || rawImg.height;
+  if (w > MAX_DIM || h > MAX_DIM) {
+    const scale = MAX_DIM / Math.max(w, h);
+    w = Math.round(w * scale);
+    h = Math.round(h * scale);
+  }
+  const cv = document.createElement("canvas");
+  cv.width = w; cv.height = h;
+  const cx = cv.getContext("2d", { willReadFrequently: true });
+  cx.drawImage(rawImg, 0, 0, w, h);
+
+  if (applyVignette) {
+    cx.save();
+    cx.globalCompositeOperation = "destination-in";
+    cx.translate(w * 0.5, h * 0.48);
+    cx.scale(1, (h * 0.48) / (w * 0.44));
+    const rOuter = w * 0.45;
+    const vg = cx.createRadialGradient(0, 0, rOuter * 0.52, 0, 0, rOuter);
+    vg.addColorStop(0, "rgba(0,0,0,1)");
+    vg.addColorStop(0.75, "rgba(0,0,0,0.92)");
+    vg.addColorStop(1, "rgba(0,0,0,0)");
+    cx.fillStyle = vg;
+    cx.fillRect(-w, -h, w * 2, h * 2);
+    cx.restore();
+  }
+  return cv;
+}
+
+function updateFacePixels(w, h) {
+  FACE = {
+    x: Math.round(faceConfigPct.x * w),
+    y: Math.round(faceConfigPct.y * h),
+    rx: Math.max(12, Math.round(faceConfigPct.rx * w)),
+    ry: Math.max(14, Math.round(faceConfigPct.ry * h))
+  };
+}
+
+function analyse(sourceCanvas) {
+  const w = sourceCanvas.width, h = sourceCanvas.height, N = w * h;
+  updateFacePixels(w, h);
+
+  const cx = sourceCanvas.getContext("2d", { willReadFrequently: true });
+  const d = cx.getImageData(0, 0, w, h).data;
+
+  const A = new Float32Array(N), ch = [0, 1, 2].map(() => new Float32Array(N));
+  const mask = new Uint8Array(N);
+  for (let i = 0; i < N; i++) {
+    A[i] = d[i * 4 + 3] / 255;
+    mask[i] = A[i] > 0.4 ? 1 : 0;
+    for (let c = 0; c < 3; c++) ch[c][i] = (d[i * 4 + c] / 255) * A[i];
+  }
+
+  // alpha-weighted colour: sharp and two blurred versions
+  const sharp = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) for (let c = 0; c < 3; c++) sharp[i * 3 + c] = A[i] > 0.02 ? ch[c][i] / A[i] : 0;
+  const colour = (r) => {
+    const a = boxBlur(A, w, h, r), out = new Float32Array(N * 3);
+    for (let c = 0; c < 3; c++) {
+      const b = boxBlur(ch[c], w, h, r);
+      for (let i = 0; i < N; i++) out[i * 3 + c] = a[i] > 0.01 ? b[i] / a[i] : sharp[i * 3 + c];
+    }
+    return out;
+  };
+  const soft = colour(5), mid = colour(2);
+
+  // luminance gradient -> smoothed structure tensor -> stroke direction
+  const L = new Float32Array(N);
+  for (let i = 0; i < N; i++) L[i] = 0.3 * sharp[i * 3] + 0.59 * sharp[i * 3 + 1] + 0.11 * sharp[i * 3 + 2];
+  const Ls = boxBlur(boxBlur(L, w, h, 1), w, h, 1);
+  const J11 = new Float32Array(N), J22 = new Float32Array(N), J12 = new Float32Array(N), E = new Float32Array(N);
+  for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+    const i = y * w + x;
+    const gx = (Ls[i + 1] - Ls[i - 1]) * 0.5, gy = (Ls[i + w] - Ls[i - w]) * 0.5;
+    J11[i] = gx * gx; J22[i] = gy * gy; J12[i] = gx * gy; E[i] = Math.hypot(gx, gy);
+  }
+  const S11 = boxBlur(boxBlur(J11, w, h, 3), w, h, 3);
+  const S22 = boxBlur(boxBlur(J22, w, h, 3), w, h, 3);
+  const S12 = boxBlur(boxBlur(J12, w, h, 3), w, h, 3);
+  const tx = new Float32Array(N), ty = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const th = 0.5 * Math.atan2(2 * S12[i], S11[i] - S22[i]);
+    const coh = Math.hypot(S11[i] - S22[i], 2 * S12[i]) / (S11[i] + S22[i] + 1e-6);
+    const a = th + Math.PI / 2, f = 0.7; // weak coherence -> drift toward a soft diagonal
+    const dx = coh * Math.cos(a) + (1 - coh) * Math.cos(f), dy = coh * Math.sin(a) + (1 - coh) * Math.sin(f);
+    const m = Math.hypot(dx, dy) + 1e-6;
+    tx[i] = dx / m; ty[i] = dy / m;
+  }
+  const sorted = Float32Array.from(E).sort();
+  const e95 = sorted[Math.floor(N * 0.95)] + 1e-6;
+  for (let i = 0; i < N; i++) E[i] = Math.min(1, E[i] / e95);
+
+  const inside = [], bright = [];
+  const innerRx = Math.max(10, FACE.rx * 0.72), innerRy = Math.max(12, FACE.ry * 0.9);
+  for (let i = 0; i < N; i++) if (mask[i]) {
+    inside.push(i);
+    if (L[i] > 0.62 && A[i] > 0.9 && (((i % w) - FACE.x) / innerRx) ** 2 + ((((i / w) | 0) - FACE.y + 4) / innerRy) ** 2 > 1) {
+      bright.push(i);
+    }
+  }
+  if (!inside.length) inside.push(Math.floor(N / 2));
+  const faceIdx = inside.filter((i) => (((i % w) - FACE.x) / FACE.rx) ** 2 + ((((i / w) | 0) - FACE.y) / FACE.ry) ** 2 <= 1);
+  return {
+    faceIdx: Int32Array.from(faceIdx.length ? faceIdx : inside),
+    w, h, N, mask, sharp, soft, mid, tx, ty, E,
+    inside: Int32Array.from(inside),
+    bright: Int32Array.from(bright.length > 40 ? bright : inside),
+    cutout: sourceCanvas
+  };
+}
+
+/* ---------- 6-Layer Impressionist Painter ---------- */
+
+const LAYERS = [
+  { r: 5.0, len: 8, src: "soft",  thr: 0.34, dur: 1.3, edge: 0.0 },
+  { r: 3.0, len: 7, src: "soft",  thr: 0.24, dur: 1.6, edge: 0.0 },
+  { r: 1.8, len: 6, src: "mid",   thr: 0.18, dur: 2.0, edge: 0.25 },
+  { r: 1.0, len: 4, src: "sharp", thr: 0.12, dur: 2.8, edge: 0.55 },
+  { r: 0.55, len: 3, src: "sharp", thr: 0.10, dur: 3.4, edge: 0.7 },
+  { r: 0.38, len: 2.5, src: "sharp", thr: 0.09, dur: 1.8, edge: 0.4, face: true, density: 3.4 },
+];
+const PAINT_TIME = LAYERS.reduce((s, l) => s + l.dur, 0);
+
+function makePainter(data, ctx, seed) {
+  const R = rng(seed);
+  const { w, h, mask, tx, ty, E, inside } = data;
+  let t0 = null, li = 0, made = 0, plan = null, done = false;
+
+  function nextLayer() {
+    const L = LAYERS[li];
+    const pool = L.face ? data.faceIdx : inside;
+    const n = Math.round(pool.length / (2 * L.r * L.len) * (L.density || (L.r < 1.2 ? 2.6 : 2.2)));
+    plan = { L, n, pool, src: data[L.src] };
+    made = 0;
+  }
+  nextLayer();
+
+  function color(src, i) {
+    const j = (R() - 0.5) * 0.07;
+    return [src[i * 3] + j, src[i * 3 + 1] + j, src[i * 3 + 2] + j].map((v) => Math.round(clamp(v) * 255));
+  }
+  function walk(x, y, dir, steps, ref, thr) {
+    const pts = [];
+    let px = tx[(y | 0) * w + (x | 0)] * dir, py = ty[(y | 0) * w + (x | 0)] * dir;
+    for (let s = 0; s < steps; s++) {
+      const xi = x | 0, yi = y | 0;
+      if (xi < 0 || yi < 0 || xi >= w || yi >= h) break;
+      const i = yi * w + xi;
+      if (!mask[i]) break;
+      let dx = tx[i], dy = ty[i];
+      if (dx * px + dy * py < 0) { dx = -dx; dy = -dy; }
+      px = dx; py = dy;
+      x += dx; y += dy;
+      const j = ((y | 0) * w + (x | 0));
+      if (j < 0 || j >= w * h || !mask[j]) break;
+      const sp = data.sharp;
+      const dist = (Math.abs(sp[j * 3] - ref[0]) + Math.abs(sp[j * 3 + 1] - ref[1]) + Math.abs(sp[j * 3 + 2] - ref[2])) / 3;
+      if (s > 1 && dist > thr) break;
+      pts.push(x, y);
+    }
+    return pts;
+  }
+  function stroke() {
+    const { L, src, pool } = plan;
+    let i, tries = 0;
+    do { i = pool[(R() * pool.length) | 0]; tries++; } while (tries < 8 && R() > (1 - L.edge) + L.edge * E[i]);
+    const x = (i % w) + R(), y = ((i / w) | 0) + R();
+    const c = color(src, i);
+    const ref = [data.sharp[i * 3], data.sharp[i * 3 + 1], data.sharp[i * 3 + 2]];
+    const len = L.len * (0.6 + 0.6 * R());
+    const fwd = walk(x, y, 1, len / 2, ref, L.thr), bwd = walk(x, y, -1, len / 2, ref, L.thr);
+    ctx.strokeStyle = `rgba(${c[0]},${c[1]},${c[2]},0.94)`;
+    ctx.lineWidth = Math.max(1.5, 2 * L.r * K * (0.85 + 0.3 * R()));
+    ctx.beginPath();
+    if (bwd.length) {
+      ctx.moveTo(bwd[bwd.length - 2] * K, bwd[bwd.length - 1] * K);
+      for (let k = bwd.length - 4; k >= 0; k -= 2) ctx.lineTo(bwd[k] * K, bwd[k + 1] * K);
+      ctx.lineTo(x * K, y * K);
+    } else ctx.moveTo(x * K, y * K);
+    if (!fwd.length && !bwd.length) ctx.lineTo(x * K + 0.01, y * K);
+    for (let k = 0; k < fwd.length; k += 2) ctx.lineTo(fwd[k] * K, fwd[k + 1] * K);
+    ctx.stroke();
+  }
+
+  return {
+    get done() { return done; },
+    get progress() { return done ? 1 : (t0 === null ? 0 : clamp((performance.now() - t0) / 1000 / PAINT_TIME)); },
+    finishInstant() {
+      ctx.lineCap = "round"; ctx.lineJoin = "round";
+      while (li < LAYERS.length) {
+        while (made < plan.n) { stroke(); made++; }
+        li++;
+        if (li >= LAYERS.length) { done = true; return; }
+        nextLayer();
+      }
+    },
+    step(now) {
+      if (done) return;
+      if (t0 === null) t0 = now;
+      const t = (now - t0) / 1000;
+      let start = 0;
+      for (let k = 0; k < li; k++) start += LAYERS[k].dur;
+      while (li < LAYERS.length) {
+        const L = plan.L, target = Math.round(plan.n * clamp((t - start) / L.dur));
+        ctx.lineCap = "round"; ctx.lineJoin = "round";
+        let budget = 1800;
+        while (made < target && budget-- > 0) { stroke(); made++; }
+        if (made >= plan.n) {
+          li++; start += L.dur;
+          if (li >= LAYERS.length) { done = true; return; }
+          nextLayer();
+        } else break;
+      }
+    },
+  };
+}
+
+/* ---------- Scene & Post-Processing ---------- */
+
+const view = document.getElementById("view"), g = view.getContext("2d");
+const capEl = document.getElementById("cap");
+const statusBadge = document.getElementById("paintStatus");
+
+let rawLoadedImg = null;
+let normalizedCanvas = null;
+let faceSharp, data, paint, pctx, under, comp, cctx, shine, sctx, bloom, bctx, photo, painter, seed = 7;
+let DPR = 1, VW = 0, VH = 0, pointer = { x: 0, y: 0, sx: 0, sy: 0 };
+let doneAt = null, dust = [];
+
+const bokeh = Array.from({ length: 28 }, (_, i) => {
+  const r = rng(i * 977 + 5);
+  return { x: r(), y: r(), s: 8 + r() * 30, v: 0.006 + r() * 0.016, p: r() * TAU, hue: r() < 0.6 ? 0 : 1, ring: r() < 0.3 };
+});
+
+function resize() {
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  VW = innerWidth; VH = innerHeight;
+  view.width = Math.round(VW * DPR); view.height = Math.round(VH * DPR);
+}
+addEventListener("resize", resize);
+addEventListener("pointermove", (e) => { pointer.x = e.clientX / innerWidth - 0.5; pointer.y = e.clientY / innerHeight - 0.5; });
+
+function canvasOf(w, h) { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; }
+
+function rebuildFaceSharpLayer() {
+  if (!data || !normalizedCanvas) return;
+  const PW = Math.round(data.w * K), PH = Math.round(data.h * K);
+  updateFacePixels(data.w, data.h);
+  faceSharp = canvasOf(PW, PH);
+  const fx = faceSharp.getContext("2d");
+  fx.drawImage(normalizedCanvas, 0, 0, PW, PH);
+  fx.globalCompositeOperation = "destination-in";
+  fx.save();
+  fx.translate(FACE.x * K, FACE.y * K);
+  fx.scale(1, FACE.ry / FACE.rx);
+  const fg = fx.createRadialGradient(0, 0, FACE.rx * K * 0.55, 0, 0, FACE.rx * K * 1.05);
+  fg.addColorStop(0, "rgba(0,0,0,1)");
+  fg.addColorStop(1, "rgba(0,0,0,0)");
+  fx.fillStyle = fg;
+  fx.fillRect(-FACE.rx * K * 1.2, -FACE.rx * K * 1.2, FACE.rx * K * 2.4, FACE.rx * K * 2.4);
+  fx.restore();
+}
+
+function setupFromImage(img) {
+  rawLoadedImg = img;
+  normalizedCanvas = prepareNormalizedCanvas(img, useSoftVignetteMask);
+  PHOTO_DATA_URI = normalizedCanvas.toDataURL("image/webp", 0.92);
+  document.getElementById("imgDimLabel").textContent = `${normalizedCanvas.width}×${normalizedCanvas.height}px`;
+
+  data = analyse(normalizedCanvas);
+  const PW = Math.round(data.w * K), PH = Math.round(data.h * K);
+  paint = canvasOf(PW, PH); pctx = paint.getContext("2d");
+  comp  = canvasOf(PW, PH); cctx = comp.getContext("2d");
+  shine = canvasOf(PW, PH); sctx = shine.getContext("2d");
+  bloom = canvasOf(Math.ceil(PW / 7), Math.ceil(PH / 7)); bctx = bloom.getContext("2d");
+  photo = canvasOf(PW, PH); photo.getContext("2d").drawImage(normalizedCanvas, 0, 0, PW, PH);
+
+  rebuildFaceSharpLayer();
+
+  // soft under-painting so no black gaps show between strokes
+  under = canvasOf(PW, PH);
+  const ux = under.getContext("2d"), tiny = canvasOf(Math.ceil(data.w / 3), Math.ceil(data.h / 3));
+  tiny.getContext("2d").drawImage(normalizedCanvas, 0, 0, tiny.width, tiny.height);
+  ux.imageSmoothingEnabled = true; ux.drawImage(tiny, 0, 0, PW, PH);
+  ux.globalCompositeOperation = "destination-in"; ux.drawImage(photo, 0, 0);
+
+  replay();
+}
+
+function replay() {
+  if (! normalizedCanvas) return;
+  data = analyse(normalizedCanvas);
+  rebuildFaceSharpLayer();
+  seed = (seed * 31 + 11) | 0;
+  pctx.clearRect(0, 0, paint.width, paint.height);
+  painter = makePainter(data, pctx, seed);
+  doneAt = null;
+  capEl.classList.remove("on");
+  const r = rng(seed ^ 0x5eed);
+  dust = Array.from({ length: 110 }, () => spawn(r, r()));
+}
+
+function spawn(r, life) {
+  const i = data.bright[(r() * data.bright.length) | 0];
+  return {
+    x: ((i % data.w) + r()) * K,
+    y: (((i / data.w) | 0) + r()) * K,
+    vx: (r() - 0.5) * 0.25,
+    vy: -(0.25 + r() * 0.55),
+    s: 0.8 + r() * 2.2,
+    life,
+    speed: 0.18 + r() * 0.3,
+    gold: r() < 0.78,
+    ph: r() * TAU
+  };
+}
+
+/* ---------- Animation Loop ---------- */
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (!data) return;
+  const t = now * 0.001;
+
+  painter.step(now);
+  if (painter.done && doneAt === null) {
+    doneAt = now;
+    capEl.classList.add("on");
+    statusBadge.textContent = "Complete · 100%";
+  } else if (!painter.done) {
+    statusBadge.textContent = `Painting · ${Math.round(painter.progress * 100)}%`;
+  }
+  const since = doneAt === null ? 0 : (now - doneAt) / 1000;
+
+  pointer.sx += (pointer.x - pointer.sx) * 0.05;
+  pointer.sy += (pointer.y - pointer.sy) * 0.05;
+
+  const W = view.width, H = view.height;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalCompositeOperation = "source-over";
+  g.globalAlpha = 1;
+  g.fillStyle = "#050304";
+  g.fillRect(0, 0, W, H);
+
+  // layout: portrait sits high so the caption rests on her faded hem
+  const PW = paint.width, PH = paint.height;
+  const breathe = 1 + 0.004 * Math.sin(t * 0.9);
+  const sc = Math.min((H * 0.86) / PH, (W * 0.94) / PW) * breathe;
+  const ox = (W - PW * sc) / 2 - pointer.sx * 14 * DPR;
+  const oy = H * 0.02 - pointer.sy * 10 * DPR;
+  const toX = (x) => ox + x * sc, toY = (y) => oy + y * sc;
+
+  // warm aura behind portrait
+  const pulse = 0.85 + 0.15 * Math.sin(t * 0.7);
+  const cxs = ox + PW * sc * 0.5, cys = oy + PH * sc * 0.34, rad = Math.max(W, H) * 0.55;
+  const aura = g.createRadialGradient(cxs, cys, 0, cxs, cys, rad);
+  aura.addColorStop(0, `rgba(150,50,80,${0.34 * pulse * (0.4 + 0.6 * ease(painter.progress * 1.4))})`);
+  aura.addColorStop(0.45, `rgba(70,22,52,${0.18 * pulse})`);
+  aura.addColorStop(1, "rgba(5,3,4,0)");
+  g.fillStyle = aura;
+  g.fillRect(0, 0, W, H);
+
+  // drifting bokeh lights
+  g.globalCompositeOperation = "lighter";
+  for (const b of bokeh) {
+    const y = ((b.y - t * b.v) % 1 + 1) % 1, x = b.x + 0.012 * Math.sin(t * 0.3 + b.p);
+    const a = (0.05 + 0.05 * Math.sin(t * 0.8 + b.p)) * (0.4 + 0.6 * ease(painter.progress * 1.5));
+    const r = b.s * DPR, px = x * W, py = y * H;
+    const rg = g.createRadialGradient(px, py, 0, px, py, r);
+    const col = b.hue ? "255,150,190" : "255,205,130";
+    rg.addColorStop(0, `rgba(${col},${a})`);
+    rg.addColorStop(b.ring ? 0.82 : 0.6, `rgba(${col},${a * (b.ring ? 1.5 : 0.7)})`);
+    rg.addColorStop(1, `rgba(${col},0)`);
+    g.fillStyle = rg;
+    g.beginPath();
+    g.arc(px, py, r, 0, TAU);
+    g.fill();
+  }
+  g.globalCompositeOperation = "source-over";
+
+  // compose portrait: under-paint -> strokes -> faint real-photo detail
+  cctx.globalCompositeOperation = "source-over";
+  cctx.clearRect(0, 0, PW, PH);
+  cctx.globalAlpha = ease(painter.progress * 4) * 0.9;
+  cctx.drawImage(under, 0, 0);
+  cctx.globalAlpha = 1;
+  cctx.drawImage(paint, 0, 0);
+  cctx.globalCompositeOperation = "destination-in";
+  cctx.drawImage(photo, 0, 0); // keep every stroke inside outline
+  cctx.globalCompositeOperation = "source-over";
+  if (since > 0) {
+    cctx.globalAlpha = 0.24 * ease(since / 3);
+    cctx.drawImage(photo, 0, 0);
+    cctx.globalAlpha = 0.68 * ease(since / 3);
+    cctx.drawImage(faceSharp, 0, 0);
+    cctx.globalAlpha = 1;
+  }
+
+  g.imageSmoothingEnabled = true;
+  g.imageSmoothingQuality = "high";
+  g.drawImage(comp, ox, oy, PW * sc, PH * sc);
+
+  // bloom pass
+  bctx.clearRect(0, 0, bloom.width, bloom.height);
+  bctx.drawImage(comp, 0, 0, bloom.width, bloom.height);
+  g.globalCompositeOperation = "lighter";
+  g.globalAlpha = 0.42;
+  g.drawImage(bloom, ox, oy, PW * sc, PH * sc);
+  g.globalAlpha = 1;
+
+  // slow light sweep across silhouette
+  if (since > 1) {
+    const cyc = ((since - 1) % 9) / 2.6;
+    if (cyc < 1) {
+      const p = ease(cyc) * (PW + PH * 0.5) - PH * 0.25, band = PW * 0.22;
+      sctx.globalCompositeOperation = "source-over";
+      sctx.clearRect(0, 0, PW, PH);
+      const gr = sctx.createLinearGradient(p - band, 0, p + band, PH * 0.5);
+      gr.addColorStop(0, "rgba(255,220,160,0)");
+      gr.addColorStop(0.5, `rgba(255,226,170,${0.33 * Math.sin(Math.PI * cyc)})`);
+      gr.addColorStop(1, "rgba(255,220,160,0)");
+      sctx.fillStyle = gr;
+      sctx.fillRect(0, 0, PW, PH);
+      sctx.globalCompositeOperation = "destination-in";
+      sctx.drawImage(photo, 0, 0);
+      g.drawImage(shine, ox, oy, PW * sc, PH * sc);
+    }
+  }
+
+  // golden dust lifting off bright jewelry and zari pixels
+  const dustOn = ease(painter.progress * 1.6);
+  const r = Math.random;
+  for (let k = 0; k < dust.length; k++) {
+    const d = dust[k];
+    d.life += 0.0035 * d.speed * 3;
+    d.x += d.vx + 0.2 * Math.sin(t * 1.3 + d.ph);
+    d.y += d.vy;
+    if (d.life >= 1) { dust[k] = spawn(r, 0); continue; }
+    const tw = 0.4 + 0.6 * Math.pow(0.5 + 0.5 * Math.sin(t * 3 + d.ph), 2);
+    const a = Math.sin(Math.PI * d.life) * 0.85 * tw * dustOn;
+    const px = toX(d.x), py = toY(d.y), rr = d.s * 3.2 * DPR;
+    const rg = g.createRadialGradient(px, py, 0, px, py, rr);
+    const col = d.gold ? "255,214,132" : "255,170,205";
+    rg.addColorStop(0, `rgba(${col},${a})`);
+    rg.addColorStop(0.35, `rgba(${col},${a * 0.35})`);
+    rg.addColorStop(1, `rgba(${col},0)`);
+    g.fillStyle = rg;
+    g.beginPath();
+    g.arc(px, py, rr, 0, TAU);
+    g.fill();
+  }
+  g.globalCompositeOperation = "source-over";
+
+  // Interactive Face Focus Ellipse Visual Guide (when calibrating in Studio)
+  if (showFaceGuide) {
+    const fxScreen = toX(FACE.x * K);
+    const fyScreen = toY(FACE.y * K);
+    const rxScreen = FACE.rx * K * sc;
+    const ryScreen = FACE.ry * K * sc;
+    g.save();
+    g.strokeStyle = "rgba(246, 215, 158, 0.9)";
+    g.lineWidth = 1.8 * DPR;
+    g.setLineDash([6 * DPR, 5 * DPR]);
+    g.beginPath();
+    g.ellipse(fxScreen, fyScreen, rxScreen, ryScreen, 0, 0, TAU);
+    g.stroke();
+
+    // Inner feather core ring
+    g.strokeStyle = "rgba(244, 184, 208, 0.55)";
+    g.beginPath();
+    g.ellipse(fxScreen, fyScreen, rxScreen * 0.55, ryScreen * 0.55, 0, 0, TAU);
+    g.stroke();
+
+    // Center crosshair
+    g.setLineDash([]);
+    g.fillStyle = "#f6d79e";
+    g.beginPath();
+    g.arc(fxScreen, fyScreen, 3.5 * DPR, 0, TAU);
+    g.fill();
+    g.restore();
+  }
+
+  // vignette
+  const vg = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.8);
+  vg.addColorStop(0, "rgba(0,0,0,0)");
+  vg.addColorStop(1, "rgba(0,0,0,0.55)");
+  g.fillStyle = vg;
+  g.fillRect(0, 0, W, H);
+
+  // fade-in from black
+  const fin = 1 - ease(now / 900);
+  if (fin > 0.001) {
+    g.fillStyle = `rgba(5,3,4,${fin})`;
+    g.fillRect(0, 0, W, H);
+  }
+}
+
+/* ============================================================================
+   3. STUDIO UI INTERACTIONS & LIVE PREVIEW BINDINGS
+   ============================================================================ */
+const overlay = document.getElementById("overlay");
+const studioDrawer = document.getElementById("studioDrawer");
+const toastEl = document.getElementById("toast");
+
+function showToast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(() => toastEl.classList.remove("show"), 3200);
+}
+
+const openMessage = () => {
+  overlay.classList.add("open");
+  overlay.setAttribute("aria-hidden", "false");
+};
+const closeMessage = () => {
+  overlay.classList.remove("open");
+  overlay.setAttribute("aria-hidden", "true");
+};
+
+document.getElementById("messageBtn").addEventListener("click", openMessage);
+document.getElementById("closeBtn").addEventListener("click", closeMessage);
+overlay.addEventListener("click", (e) => { if (e.target === overlay) closeMessage(); });
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    closeMessage();
+    studioDrawer.classList.remove("open");
+    showFaceGuide = document.getElementById("showFaceGuideToggle").checked;
+  }
+});
+document.getElementById("replayBtn").addEventListener("click", () => {
+  closeMessage();
+  if (data) replay();
+});
+document.getElementById("sig").addEventListener("click", () => { if (data) replay(); });
+
+// Studio Drawer Toggle
+document.getElementById("openStudioBtn").addEventListener("click", () => {
+  studioDrawer.classList.add("open");
+});
+document.getElementById("closeStudioBtn").addEventListener("click", () => {
+  studioDrawer.classList.remove("open");
+  showFaceGuide = document.getElementById("showFaceGuideToggle").checked;
+});
+
+// Instant Bloom Button
+document.getElementById("fastFinishBtn").addEventListener("click", () => {
+  if (painter && !painter.done) {
+    painter.finishInstant();
+  }
+});
+
+// Check if an uploaded image has transparency along its border
+function checkImageHasTransparency(img) {
+  const cw = 64, ch = 64;
+  const c = canvasOf(cw, ch);
+  const cx = c.getContext("2d");
+  cx.drawImage(img, 0, 0, cw, ch);
+  const id = cx.getImageData(0, 0, cw, ch).data;
+  let transparentCount = 0;
+  for (let x = 0; x < cw; x++) {
+    if (id[(x) * 4 + 3] < 200) transparentCount++;
+    if (id[((ch - 1) * cw + x) * 4 + 3] < 200) transparentCount++;
+  }
+  return transparentCount > 12;
+}
+
+// Photo Upload Handler
+const photoInput = document.getElementById("photoInput");
+const dropzone = document.getElementById("dropzone");
+const vignetteToggle = document.getElementById("vignetteMaskToggle");
+
+function handleFileUpload(file) {
+  if (!file || !file.type.startsWith("image/")) {
+    showToast("Please select a valid PNG, JPG, or WebP image.");
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const uploadedImg = new Image();
+    uploadedImg.onload = () => {
+      const hasAlpha = checkImageHasTransparency(uploadedImg);
+      // Automatically turn on Soft Vignette Cutout for standard opaque rectangular photos
+      useSoftVignetteMask = !hasAlpha;
+      vignetteToggle.checked = useSoftVignetteMask;
+      document.getElementById("presetMuseBtn").classList.remove("active");
+      setupFromImage(uploadedImg);
+      showToast(hasAlpha ? "Transparent cutout loaded & painting started!" : "Photo loaded with Soft Portrait Vignette!");
+    };
+    uploadedImg.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+photoInput.addEventListener("change", (e) => {
+  if (e.target.files && e.target.files[0]) handleFileUpload(e.target.files[0]);
+});
+dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("dragover"); });
+dropzone.addEventListener("dragleave", () => dropzone.classList.remove("dragover"));
+dropzone.addEventListener("drop", (e) => {
+  e.preventDefault();
+  dropzone.classList.remove("dragover");
+  if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFileUpload(e.dataTransfer.files[0]);
+});
+
+vignetteToggle.addEventListener("change", (e) => {
+  useSoftVignetteMask = e.target.checked;
+  if (rawLoadedImg) setupFromImage(rawLoadedImg);
+});
+
+document.getElementById("presetMuseBtn").addEventListener("click", () => {
+  useSoftVignetteMask = false;
+  vignetteToggle.checked = false;
+  document.getElementById("presetMuseBtn").classList.add("active");
+  faceConfigPct = { x: 0.50, y: 0.315, rx: 0.145, ry: 0.145 };
+  syncFaceSliders();
+  const defaultImg = new Image();
+  defaultImg.onload = () => setupFromImage(defaultImg);
+  defaultImg.src = createDefaultMuseDataURL();
+  showToast("Restored Default Procedural Muse");
+});
+
+document.getElementById("replayNowBtn").addEventListener("click", () => {
+  if (data) replay();
+});
+
+// Face Focus Region Sliders
+const faceXSlider = document.getElementById("faceXSlider");
+const faceYSlider = document.getElementById("faceYSlider");
+const faceRXSlider = document.getElementById("faceRXSlider");
+const faceRYSlider = document.getElementById("faceRYSlider");
+const showFaceGuideToggle = document.getElementById("showFaceGuideToggle");
+
+function syncFaceSliders() {
+  faceXSlider.value = Math.round(faceConfigPct.x * 100);
+  faceYSlider.value = Math.round(faceConfigPct.y * 100);
+  faceRXSlider.value = Math.round(faceConfigPct.rx * 100);
+  faceRYSlider.value = Math.round(faceConfigPct.ry * 100);
+  document.getElementById("valFaceX").textContent = `${faceXSlider.value}%`;
+  document.getElementById("valFaceY").textContent = `${faceYSlider.value}%`;
+  document.getElementById("valFaceRX").textContent = `${faceRXSlider.value}%`;
+  document.getElementById("valFaceRY").textContent = `${faceRYSlider.value}%`;
+}
+
+let guideTimeout = null;
+function onFaceSliderInput() {
+  faceConfigPct.x = Number(faceXSlider.value) / 100;
+  faceConfigPct.y = Number(faceYSlider.value) / 100;
+  faceConfigPct.rx = Number(faceRXSlider.value) / 100;
+  faceConfigPct.ry = Number(faceRYSlider.value) / 100;
+  syncFaceSliders();
+  if (data) {
+    updateFacePixels(data.w, data.h);
+    rebuildFaceSharpLayer();
+  }
+  showFaceGuide = true;
+  clearTimeout(guideTimeout);
+  guideTimeout = setTimeout(() => {
+    if (!showFaceGuideToggle.checked) showFaceGuide = false;
+  }, 1800);
+}
+
+[faceXSlider, faceYSlider, faceRXSlider, faceRYSlider].forEach((el) => {
+  el.addEventListener("input", onFaceSliderInput);
+});
+showFaceGuideToggle.addEventListener("change", (e) => {
+  showFaceGuide = e.target.checked;
+});
+
+// Theme Switcher
+const themeRoyalBtn = document.getElementById("themeRoyalBtn");
+const themeIvoryBtn = document.getElementById("themeIvoryBtn");
+
+function setTheme(themeName) {
+  document.body.setAttribute("data-theme", themeName);
+  themeRoyalBtn.classList.toggle("active", themeName === "royal");
+  themeIvoryBtn.classList.toggle("active", themeName === "ivory");
+}
+themeRoyalBtn.addEventListener("click", () => setTheme("royal"));
+themeIvoryBtn.addEventListener("click", () => setTheme("ivory"));
+
+// Live Text & Letter Sync
+function syncTextContent() {
+  const pageTitle = document.getElementById("inputPageTitle").value.trim() || "A bouquet in brushstrokes";
+  const caption = document.getElementById("inputCaption").value;
+  const msgBtnText = document.getElementById("inputMsgBtn").value;
+  const sigBtnText = document.getElementById("inputSigBtn").value;
+  const salutation = document.getElementById("inputSalutation").value;
+  const letterBodyRaw = document.getElementById("inputLetterBody").value;
+  const flowersNote = document.getElementById("inputFlowersNote").value;
+  const signoff = document.getElementById("inputSignoff").value;
+
+  document.title = pageTitle;
+  document.getElementById("line").textContent = caption;
+  document.getElementById("messageBtn").textContent = msgBtnText;
+  document.getElementById("sig").textContent = sigBtnText;
+  document.getElementById("letterHeading").textContent = salutation;
+  document.getElementById("letterFlowers").textContent = flowersNote;
+  document.getElementById("letterSignoff").textContent = signoff;
+
+  const container = document.getElementById("letterBodyContainer");
+  container.innerHTML = "";
+  const paragraphs = letterBodyRaw.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+  for (const pText of paragraphs) {
+    const p = document.createElement("p");
+    p.textContent = pText;
+    container.appendChild(p);
+  }
+}
+
+[
+  "inputPageTitle", "inputCaption", "inputMsgBtn", "inputSigBtn",
+  "inputSalutation", "inputLetterBody", "inputFlowersNote", "inputSignoff"
+].forEach((id) => {
+  document.getElementById(id).addEventListener("input", syncTextContent);
+});
+
+document.getElementById("applyAndReplayBtn").addEventListener("click", () => {
+  syncTextContent();
+  studioDrawer.classList.remove("open");
+  showFaceGuide = false;
+  showFaceGuideToggle.checked = false;
+  if (data) replay();
+  showToast("Repainting portrait with your custom settings!");
+});
+
+/* ============================================================================
+   4. STANDALONE GIFT HTML COMPILER & EXPORTER
+   Generates a clean, self-contained .html file identical in structure to
+   Riya5.html / For_Shreya.html with the user's photo, FACE coordinates, theme,
+   and personalized letter baked in, and all Studio UI stripped out.
+   ============================================================================ */
+function escapeHTML(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function buildStandaloneGiftHTML() {
+  const theme = document.body.getAttribute("data-theme") || "royal";
+  const pageTitle = document.getElementById("inputPageTitle").value.trim() || "For You";
+  const caption = document.getElementById("inputCaption").value.trim();
+  const msgBtnText = document.getElementById("inputMsgBtn").value.trim();
+  const sigBtnText = document.getElementById("inputSigBtn").value.trim();
+  const salutation = document.getElementById("inputSalutation").value.trim();
+  const letterBodyRaw = document.getElementById("inputLetterBody").value;
+  const flowersNote = document.getElementById("inputFlowersNote").value.trim();
+  const signoff = document.getElementById("inputSignoff").value.trim();
+
+  const paragraphsHTML = letterBodyRaw
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => `    <p>${escapeHTML(p)}</p>`)
+    .join("\n\n");
+
+  const themeCSS = theme === "royal" ? `
+  #cap h1 {
+    margin: 0; font: italic 500 clamp(24px, 4vw, 44px)/1.15 "Cormorant Garamond", "Playfair Display", Georgia, serif;
+    letter-spacing: .01em;
+    background: linear-gradient(100deg, #f6d79e 0%, #ffeccf 38%, #f4b8d0 72%, #f6d79e 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 16px rgba(255, 180, 140, .35));
+  }
+  .cap-actions { display: flex; justify-content: center; align-items: center; gap: 18px; margin-top: 9px; }
+  #messageBtn {
+    pointer-events: auto; border: 1px solid rgba(246,215,158,.48);
+    border-radius: 999px; padding: 8px 16px; cursor: pointer;
+    background: rgba(38,16,27,.64); color: #f6d79e;
+    font: 500 10px/1 Georgia, serif; letter-spacing: .22em; text-transform: uppercase;
+    box-shadow: 0 0 18px rgba(246,200,76,.10); transition: .25s ease;
+    backdrop-filter: blur(8px);
+  }
+  #messageBtn:hover { color: #fff0ce; border-color: rgba(255,226,170,.9); box-shadow: 0 0 24px rgba(246,200,76,.25); }
+  #sig {
+    pointer-events: auto; margin: 0; padding: 8px 4px;
+    background: none; border: 0; cursor: pointer;
+    font: 500 10px/1 Georgia, serif; letter-spacing: .28em; text-transform: uppercase;
+    color: rgba(246,215,158,.62); transition: color .25s;
+  }
+  #sig:hover { color: #ffe9bd; }
+  .card {
+    width: min(430px, 100%); box-sizing: border-box;
+    padding: 28px 25px 22px; border-radius: 18px;
+    color: #f4e8dc; background: linear-gradient(145deg, rgba(31,13,23,.97), rgba(12,8,15,.97));
+    border: 1px solid rgba(246,215,158,.42);
+    box-shadow: 0 18px 60px rgba(0,0,0,.72), 0 0 36px rgba(239,164,180,.12);
+    transform: translateY(12px) scale(.98); transition: transform .4s ease;
+  }
+  .card h2 {
+    margin: 0 0 15px; color: #f6d79e;
+    font: italic 500 30px/1.1 "Cormorant Garamond", Georgia, serif;
+  }
+  .card .signoff { margin-top: 5px; color: #f6d79e; text-align: right; font: italic 15px Georgia, serif; }
+  .btn {
+    border: 1px solid rgba(246,215,158,.38); border-radius: 999px; padding: 8px 15px;
+    background: rgba(255,255,255,.045); color: #f0e1d5; cursor: pointer;
+    font: 11px Georgia, serif; transition: .2s ease;
+  }
+  .btn:hover { background: rgba(246,200,76,.14); border-color: rgba(246,215,158,.8); color: #fff1ce; }` : `
+  #cap h1 {
+    margin: 0; color: #f1dfc9;
+    font: italic 500 clamp(28px, 4.2vw, 46px)/1.12 "Cormorant Garamond", Georgia, serif;
+    letter-spacing: .015em; text-shadow: 0 2px 24px rgba(0,0,0,.28);
+  }
+  .cap-actions { display: flex; justify-content: center; align-items: center; gap: 18px; margin-top: 9px; }
+  #messageBtn {
+    pointer-events: auto; border: 1px solid rgba(232,211,187,.42);
+    border-radius: 2px; padding: 10px 15px; cursor: pointer;
+    background: rgba(20,12,15,.48); color: #ead7bf;
+    font: 500 10px/1 Georgia, serif; letter-spacing: .19em; text-transform: uppercase;
+    transition: background .25s ease, border-color .25s ease, color .25s ease;
+    backdrop-filter: blur(6px);
+  }
+  #messageBtn:hover { color: #fff7ed; border-color: rgba(255,239,218,.78); background: rgba(42,23,28,.72); }
+  #sig {
+    pointer-events: auto; margin: 0; padding: 8px 4px;
+    background: none; border: 0; cursor: pointer;
+    font: 500 10px/1 Georgia, serif; letter-spacing: .20em; text-transform: uppercase;
+    color: rgba(234,215,191,.68); transition: color .25s;
+  }
+  #sig:hover { color: #ffe9bd; }
+  .card {
+    width: min(430px, 100%); box-sizing: border-box;
+    padding: 28px 25px 22px; border-radius: 18px;
+    color: #f1e8df; background: rgba(24,17,19,.97);
+    border: 1px solid rgba(226,207,187,.30);
+    box-shadow: 0 22px 70px rgba(0,0,0,.58);
+    transform: translateY(12px) scale(.98); transition: transform .4s ease;
+  }
+  .card h2 {
+    margin: 0 0 17px; color: #ead5bd;
+    font: italic 500 32px/1.1 "Cormorant Garamond", Georgia, serif;
+  }
+  .card .signoff { margin-top: 5px; color: #ead5bd; text-align: right; font: italic 15px Georgia, serif; }
+  .btn {
+    border: 1px solid rgba(226,207,187,.30); border-radius: 2px; padding: 9px 15px;
+    background: rgba(255,255,255,.035); color: #e9ddd2; cursor: pointer;
+    font: 11px Georgia, serif; transition: .2s ease;
+  }
+  .btn:hover { background: rgba(226,207,187,.10); border-color: rgba(226,207,187,.65); color: #fff7ed; }`;
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>${escapeHTML(pageTitle)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,500&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; height: 100%; background: #050304; overflow: hidden; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  #cap {
+    position: fixed; left: 0; right: 0;
+    bottom: max(20px, env(safe-area-inset-bottom));
+    text-align: center; padding: 0 20px;
+    opacity: 0; transition: opacity 2.6s ease; pointer-events: none;
+    z-index: 5;
+  }
+  #cap.on { opacity: 1; }
+  #cap::before {
+    content: ""; position: absolute; left: 0; right: 0; bottom: -20px;
+    height: 190%; z-index: -1;
+    background: linear-gradient(to top, rgba(5,3,4,.94) 0%, rgba(5,3,4,.72) 45%, rgba(5,3,4,0) 100%);
+  }
+  #overlay {
+    position: fixed; inset: 0; z-index: 20; padding: 20px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(4,2,5,.70); backdrop-filter: blur(7px);
+    opacity: 0; pointer-events: none; transition: opacity .4s ease;
+  }
+  #overlay.open { opacity: 1; pointer-events: auto; }
+  #overlay.open .card { transform: translateY(0) scale(1); }
+  .card p { margin: 0 0 13px; font: 14px/1.7 Georgia, serif; color: #e9ded5; }
+  .card .flowers-note {
+    margin-top: 16px; padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,.10);
+    color: #d6b7ad; font: italic 13px/1.6 "Cormorant Garamond", Georgia, serif;
+  }
+  .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+${themeCSS}
+  @media (max-width: 520px) {
+    .card { padding: 24px 20px 19px; }
+    .card p { font-size: 13px; }
+    .cap-actions { gap: 12px; }
+    #messageBtn { letter-spacing: .14em; padding: 8px 12px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="cap">
+  <h1 id="line"></h1>
+  <div class="cap-actions">
+    <button id="messageBtn" type="button">${escapeHTML(msgBtnText)}</button>
+    <button id="sig" type="button" title="paint again">${escapeHTML(sigBtnText)}</button>
+  </div>
+</div>
+
+<div id="overlay" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="card">
+    <h2>${escapeHTML(salutation)}</h2>
+
+${paragraphsHTML}
+
+    <div class="flowers-note">${escapeHTML(flowersNote)}</div>
+
+    <div class="signoff">${escapeHTML(signoff)}</div>
+
+    <div class="actions">
+      <button class="btn" id="replayBtn" type="button">bloom again</button>
+      <button class="btn" id="closeBtn" type="button">close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+const PHOTO = ${JSON.stringify(PHOTO_DATA_URI)};
+const CAPTION = ${JSON.stringify(caption)};
+
+const FACE = ${JSON.stringify(FACE)};
+const K   = ${K};
+const TAU = Math.PI * 2;
+const clamp = (x, a = 0, b = 1) => (x < a ? a : x > b ? b : x);
+const ease  = (x) => 1 - Math.pow(1 - clamp(x), 3);
+
+function rng(seed) {
+  let s = seed >>> 0;
+  return () => {
+    s = (s + 0x6D2B79F5) >>> 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+${boxBlur.toString()}
+
+function analyse(img) {
+  const w = img.naturalWidth, h = img.naturalHeight, N = w * h;
+  const cv = document.createElement("canvas");
+  cv.width = w; cv.height = h;
+  const cx = cv.getContext("2d", { willReadFrequently: true });
+  cx.drawImage(img, 0, 0);
+  const d = cx.getImageData(0, 0, w, h).data;
+
+  const A = new Float32Array(N), ch = [0, 1, 2].map(() => new Float32Array(N));
+  const mask = new Uint8Array(N);
+  for (let i = 0; i < N; i++) {
+    A[i] = d[i * 4 + 3] / 255;
+    mask[i] = A[i] > 0.4 ? 1 : 0;
+    for (let c = 0; c < 3; c++) ch[c][i] = (d[i * 4 + c] / 255) * A[i];
+  }
+
+  const sharp = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) for (let c = 0; c < 3; c++) sharp[i * 3 + c] = A[i] > 0.02 ? ch[c][i] / A[i] : 0;
+  const colour = (r) => {
+    const a = boxBlur(A, w, h, r), out = new Float32Array(N * 3);
+    for (let c = 0; c < 3; c++) {
+      const b = boxBlur(ch[c], w, h, r);
+      for (let i = 0; i < N; i++) out[i * 3 + c] = a[i] > 0.01 ? b[i] / a[i] : sharp[i * 3 + c];
+    }
+    return out;
+  };
+  const soft = colour(5), mid = colour(2);
+
+  const L = new Float32Array(N);
+  for (let i = 0; i < N; i++) L[i] = 0.3 * sharp[i * 3] + 0.59 * sharp[i * 3 + 1] + 0.11 * sharp[i * 3 + 2];
+  const Ls = boxBlur(boxBlur(L, w, h, 1), w, h, 1);
+  const J11 = new Float32Array(N), J22 = new Float32Array(N), J12 = new Float32Array(N), E = new Float32Array(N);
+  for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+    const i = y * w + x;
+    const gx = (Ls[i + 1] - Ls[i - 1]) * 0.5, gy = (Ls[i + w] - Ls[i - w]) * 0.5;
+    J11[i] = gx * gx; J22[i] = gy * gy; J12[i] = gx * gy; E[i] = Math.hypot(gx, gy);
+  }
+  const S11 = boxBlur(boxBlur(J11, w, h, 3), w, h, 3);
+  const S22 = boxBlur(boxBlur(J22, w, h, 3), w, h, 3);
+  const S12 = boxBlur(boxBlur(J12, w, h, 3), w, h, 3);
+  const tx = new Float32Array(N), ty = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const th = 0.5 * Math.atan2(2 * S12[i], S11[i] - S22[i]);
+    const coh = Math.hypot(S11[i] - S22[i], 2 * S12[i]) / (S11[i] + S22[i] + 1e-6);
+    const a = th + Math.PI / 2, f = 0.7;
+    const dx = coh * Math.cos(a) + (1 - coh) * Math.cos(f), dy = coh * Math.sin(a) + (1 - coh) * Math.sin(f);
+    const m = Math.hypot(dx, dy) + 1e-6;
+    tx[i] = dx / m; ty[i] = dy / m;
+  }
+  const sorted = Float32Array.from(E).sort();
+  const e95 = sorted[Math.floor(N * 0.95)] + 1e-6;
+  for (let i = 0; i < N; i++) E[i] = Math.min(1, E[i] / e95);
+
+  const inside = [], bright = [];
+  const innerRx = Math.max(10, FACE.rx * 0.72), innerRy = Math.max(12, FACE.ry * 0.9);
+  for (let i = 0; i < N; i++) if (mask[i]) {
+    inside.push(i);
+    if (L[i] > 0.62 && A[i] > 0.9 && (((i % w) - FACE.x) / innerRx) ** 2 + ((((i / w) | 0) - FACE.y + 4) / innerRy) ** 2 > 1) bright.push(i);
+  }
+  const faceIdx = inside.filter((i) => (((i % w) - FACE.x) / FACE.rx) ** 2 + ((((i / w) | 0) - FACE.y) / FACE.ry) ** 2 <= 1);
+  return { faceIdx: Int32Array.from(faceIdx.length ? faceIdx : inside), w, h, N, mask, sharp, soft, mid, tx, ty, E, inside: Int32Array.from(inside), bright: Int32Array.from(bright.length > 40 ? bright : inside), cutout: cv };
+}
+
+const LAYERS = ${JSON.stringify(LAYERS)};
+const PAINT_TIME = LAYERS.reduce((s, l) => s + l.dur, 0);
+
+${makePainter.toString()}
+
+const view = document.getElementById("view"), g = view.getContext("2d");
+const capEl = document.getElementById("cap"), lineEl = document.getElementById("line");
+lineEl.textContent = CAPTION;
+
+let faceSharp, data, paint, pctx, under, comp, cctx, shine, sctx, bloom, bctx, photo, painter, seed = 7;
+let DPR = 1, VW = 0, VH = 0, pointer = { x: 0, y: 0, sx: 0, sy: 0 };
+let doneAt = null, dust = [];
+const bokeh = Array.from({ length: 28 }, (_, i) => {
+  const r = rng(i * 977 + 5);
+  return { x: r(), y: r(), s: 8 + r() * 30, v: 0.006 + r() * 0.016, p: r() * TAU, hue: r() < 0.6 ? 0 : 1, ring: r() < 0.3 };
+});
+
+function resize() {
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  VW = innerWidth; VH = innerHeight;
+  view.width = Math.round(VW * DPR); view.height = Math.round(VH * DPR);
+}
+addEventListener("resize", resize);
+addEventListener("pointermove", (e) => { pointer.x = e.clientX / innerWidth - 0.5; pointer.y = e.clientY / innerHeight - 0.5; });
+
+function canvasOf(w, h) { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; }
+
+function setup(img) {
+  data = analyse(img);
+  const PW = Math.round(data.w * K), PH = Math.round(data.h * K);
+  paint = canvasOf(PW, PH); pctx = paint.getContext("2d");
+  comp  = canvasOf(PW, PH); cctx = comp.getContext("2d");
+  shine = canvasOf(PW, PH); sctx = shine.getContext("2d");
+  bloom = canvasOf(Math.ceil(PW / 7), Math.ceil(PH / 7)); bctx = bloom.getContext("2d");
+  photo = canvasOf(PW, PH); photo.getContext("2d").drawImage(img, 0, 0, PW, PH);
+
+  faceSharp = canvasOf(PW, PH);
+  const fx = faceSharp.getContext("2d");
+  fx.drawImage(img, 0, 0, PW, PH);
+  fx.globalCompositeOperation = "destination-in";
+  fx.save(); fx.translate(FACE.x * K, FACE.y * K); fx.scale(1, FACE.ry / FACE.rx);
+  const fg = fx.createRadialGradient(0, 0, FACE.rx * K * 0.55, 0, 0, FACE.rx * K * 1.05);
+  fg.addColorStop(0, "rgba(0,0,0,1)"); fg.addColorStop(1, "rgba(0,0,0,0)");
+  fx.fillStyle = fg; fx.fillRect(-FACE.rx * K * 1.2, -FACE.rx * K * 1.2, FACE.rx * K * 2.4, FACE.rx * K * 2.4);
+  fx.restore();
+
+  under = canvasOf(PW, PH);
+  const ux = under.getContext("2d"), tiny = canvasOf(Math.ceil(data.w / 3), Math.ceil(data.h / 3));
+  tiny.getContext("2d").drawImage(img, 0, 0, tiny.width, tiny.height);
+  ux.imageSmoothingEnabled = true; ux.drawImage(tiny, 0, 0, PW, PH);
+  ux.globalCompositeOperation = "destination-in"; ux.drawImage(photo, 0, 0);
+
+  replay();
+}
+
+function replay() {
+  seed = (seed * 31 + 11) | 0;
+  pctx.clearRect(0, 0, paint.width, paint.height);
+  painter = makePainter(data, pctx, seed);
+  doneAt = null;
+  capEl.classList.remove("on");
+  const r = rng(seed ^ 0x5eed);
+  dust = Array.from({ length: 110 }, () => spawn(r, r()));
+}
+
+${spawn.toString()}
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (!data) return;
+  const t = now * 0.001;
+
+  painter.step(now);
+  if (painter.done && doneAt === null) { doneAt = now; capEl.classList.add("on"); }
+  const since = doneAt === null ? 0 : (now - doneAt) / 1000;
+
+  pointer.sx += (pointer.x - pointer.sx) * 0.05; pointer.sy += (pointer.y - pointer.sy) * 0.05;
+
+  const W = view.width, H = view.height;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalCompositeOperation = "source-over"; g.globalAlpha = 1;
+  g.fillStyle = "#050304"; g.fillRect(0, 0, W, H);
+
+  const PW = paint.width, PH = paint.height;
+  const breathe = 1 + 0.004 * Math.sin(t * 0.9);
+  const sc = Math.min((H * 0.86) / PH, (W * 0.94) / PW) * breathe;
+  const ox = (W - PW * sc) / 2 - pointer.sx * 14 * DPR, oy = H * 0.02 - pointer.sy * 10 * DPR;
+  const toX = (x) => ox + x * sc, toY = (y) => oy + y * sc;
+
+  const pulse = 0.85 + 0.15 * Math.sin(t * 0.7);
+  const cxs = ox + PW * sc * 0.5, cys = oy + PH * sc * 0.34, rad = Math.max(W, H) * 0.55;
+  const aura = g.createRadialGradient(cxs, cys, 0, cxs, cys, rad);
+  aura.addColorStop(0, \`rgba(150,50,80,\${0.34 * pulse * (0.4 + 0.6 * ease(painter.progress * 1.4))})\`);
+  aura.addColorStop(0.45, \`rgba(70,22,52,\${0.18 * pulse})\`);
+  aura.addColorStop(1, "rgba(5,3,4,0)");
+  g.fillStyle = aura; g.fillRect(0, 0, W, H);
+
+  g.globalCompositeOperation = "lighter";
+  for (const b of bokeh) {
+    const y = ((b.y - t * b.v) % 1 + 1) % 1, x = b.x + 0.012 * Math.sin(t * 0.3 + b.p);
+    const a = (0.05 + 0.05 * Math.sin(t * 0.8 + b.p)) * (0.4 + 0.6 * ease(painter.progress * 1.5));
+    const r = b.s * DPR, px = x * W, py = y * H;
+    const rg = g.createRadialGradient(px, py, 0, px, py, r);
+    const col = b.hue ? "255,150,190" : "255,205,130";
+    rg.addColorStop(0, \`rgba(\${col},\${a})\`); rg.addColorStop(b.ring ? 0.82 : 0.6, \`rgba(\${col},\${a * (b.ring ? 1.5 : 0.7)})\`); rg.addColorStop(1, \`rgba(\${col},0)\`);
+    g.fillStyle = rg; g.beginPath(); g.arc(px, py, r, 0, TAU); g.fill();
+  }
+  g.globalCompositeOperation = "source-over";
+
+  cctx.globalCompositeOperation = "source-over"; cctx.clearRect(0, 0, PW, PH);
+  cctx.globalAlpha = ease(painter.progress * 4) * 0.9; cctx.drawImage(under, 0, 0);
+  cctx.globalAlpha = 1; cctx.drawImage(paint, 0, 0);
+  cctx.globalCompositeOperation = "destination-in"; cctx.drawImage(photo, 0, 0);
+  cctx.globalCompositeOperation = "source-over";
+  if (since > 0) { cctx.globalAlpha = 0.24 * ease(since / 3); cctx.drawImage(photo, 0, 0);
+    cctx.globalAlpha = 0.68 * ease(since / 3); cctx.drawImage(faceSharp, 0, 0); cctx.globalAlpha = 1; }
+
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
+  g.drawImage(comp, ox, oy, PW * sc, PH * sc);
+
+  bctx.clearRect(0, 0, bloom.width, bloom.height); bctx.drawImage(comp, 0, 0, bloom.width, bloom.height);
+  g.globalCompositeOperation = "lighter"; g.globalAlpha = 0.42;
+  g.drawImage(bloom, ox, oy, PW * sc, PH * sc);
+  g.globalAlpha = 1;
+
+  if (since > 1) {
+    const cyc = ((since - 1) % 9) / 2.6;
+    if (cyc < 1) {
+      const p = ease(cyc) * (PW + PH * 0.5) - PH * 0.25, band = PW * 0.22;
+      sctx.globalCompositeOperation = "source-over"; sctx.clearRect(0, 0, PW, PH);
+      const gr = sctx.createLinearGradient(p - band, 0, p + band, PH * 0.5);
+      gr.addColorStop(0, "rgba(255,220,160,0)"); gr.addColorStop(0.5, \`rgba(255,226,170,\${0.33 * Math.sin(Math.PI * cyc)})\`); gr.addColorStop(1, "rgba(255,220,160,0)");
+      sctx.fillStyle = gr; sctx.fillRect(0, 0, PW, PH);
+      sctx.globalCompositeOperation = "destination-in"; sctx.drawImage(photo, 0, 0);
+      g.drawImage(shine, ox, oy, PW * sc, PH * sc);
+    }
+  }
+
+  const dustOn = ease(painter.progress * 1.6);
+  const r = Math.random;
+  for (let k = 0; k < dust.length; k++) {
+    const d = dust[k];
+    d.life += 0.0035 * d.speed * 3; d.x += d.vx + 0.2 * Math.sin(t * 1.3 + d.ph); d.y += d.vy;
+    if (d.life >= 1) { dust[k] = spawn(r, 0); continue; }
+    const tw = 0.4 + 0.6 * Math.pow(0.5 + 0.5 * Math.sin(t * 3 + d.ph), 2);
+    const a = Math.sin(Math.PI * d.life) * 0.85 * tw * dustOn;
+    const px = toX(d.x), py = toY(d.y), rr = d.s * 3.2 * DPR;
+    const rg = g.createRadialGradient(px, py, 0, px, py, rr);
+    const col = d.gold ? "255,214,132" : "255,170,205";
+    rg.addColorStop(0, \`rgba(\${col},\${a})\`); rg.addColorStop(0.35, \`rgba(\${col},\${a * 0.35})\`); rg.addColorStop(1, \`rgba(\${col},0)\`);
+    g.fillStyle = rg; g.beginPath(); g.arc(px, py, rr, 0, TAU); g.fill();
+  }
+  g.globalCompositeOperation = "source-over";
+
+  const vg = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.8);
+  vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,0.55)");
+  g.fillStyle = vg; g.fillRect(0, 0, W, H);
+
+  const fin = 1 - ease(now / 900);
+  if (fin > 0.001) { g.fillStyle = \`rgba(5,3,4,\${fin})\`; g.fillRect(0, 0, W, H); }
+}
+
+const overlay = document.getElementById("overlay");
+const openMessage = () => {
+  overlay.classList.add("open");
+  overlay.setAttribute("aria-hidden", "false");
+};
+const closeMessage = () => {
+  overlay.classList.remove("open");
+  overlay.setAttribute("aria-hidden", "true");
+};
+
+document.getElementById("messageBtn").addEventListener("click", openMessage);
+document.getElementById("closeBtn").addEventListener("click", closeMessage);
+overlay.addEventListener("click", (e) => { if (e.target === overlay) closeMessage(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMessage(); });
+document.getElementById("replayBtn").addEventListener("click", () => {
+  closeMessage();
+  if (data) replay();
+});
+document.getElementById("sig").addEventListener("click", () => { if (data) replay(); });
+
+resize();
+const img = new Image();
+img.onload = () => { setup(img); requestAnimationFrame(frame); };
+img.src = PHOTO;
+<\/script>
+</body>
+</html>`;
+}
+
+document.getElementById("exportGiftBtn").addEventListener("click", () => {
+  syncTextContent();
+  const htmlContent = buildStandaloneGiftHTML();
+  const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const salutationRaw = document.getElementById("inputSalutation").value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "gift";
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `for-${salutationRaw}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`Downloaded standalone gift file: for-${salutationRaw}.html`);
+});
+
+/* ---------- Boot ---------- */
+resize();
+syncFaceSliders();
+const initialImg = new Image();
+initialImg.onload = () => {
+  setupFromImage(initialImg);
+  requestAnimationFrame(frame);
+};
+initialImg.src = PHOTO_DATA_URI;
+</script>
+</body>
+</html>
