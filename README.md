@@ -9,6 +9,8 @@
 
 **Tensor Portrait Studio** (*Bloom & Brushstroke*) is a zero-dependency, single-file web application that uses real-time computer vision and procedural non-photorealistic rendering (NPR) in vanilla JavaScript. Upload any portrait, calibrate the facial detail focus region, write a custom letter, and export a self-contained `.html` keepsake file that paints itself live in the recipient's browser.
 
+🌐 **Live Studio:** [**https://leaguestar.github.io/tensor-portrait-studio/**](https://leaguestar.github.io/tensor-portrait-studio/)
+
 ---
 
 ## 🌟 Features
@@ -39,7 +41,7 @@ open index.html   # or double-click index.html
 ```
 
 ### 2. Create & Export a Personalized Gift
-1. Click **✨ Customize Gift Studio** in the top-right corner.
+1. Open the [**Live Studio**](https://leaguestar.github.io/tensor-portrait-studio/) and click **✨ Customize Gift Studio** in the top-right corner.
 2. **Upload a Portrait**: Drag and drop a PNG cutout (with a transparent background) or any standard JPG/WebP portrait (toggle **Soft Vignette Cutout** for rectangular photos).
 3. **Calibrate Face Focus**: Check **Show Guide Ring** and adjust the sliders (`Center X/Y`, `Radius X/Y`) so the dashed golden ellipse frames the subject's face.
 4. **Pick a Theme & Write Your Letter**: Choose **Royal Gold & Rose** or **Editorial Ivory**, customize the bottom caption, button labels, salutation, letter paragraphs, botanical note, and sign-off.
@@ -62,7 +64,7 @@ $$J_{11} = g_x^2, \quad J_{22} = g_y^2, \quad J_{12} = g_x g_y, \quad E = \sqrt{
 
 Each component is smoothed twice with a radius-3 box blur to form $S_{11}, S_{22}, S_{12}$. The local orientation angle $\theta$ and anisotropy coherence $c \in [0, 1]$ are computed as:
 
-$$\theta = \frac{1}{2} \operatorname{atan2}(2 S_{12}, S_{11} - S_{22}), \qquad c = \frac{\sqrt{(S_{11} - S_{22})^2 + 4 S_{12}^2}}{S_{11} + S_{22} + \epsilon}$$
+$$\theta = \frac{1}{2} \mathrm{atan2}(2 S_{12}, S_{11} - S_{22}), \qquad c = \frac{\sqrt{(S_{11} - S_{22})^2 + 4 S_{12}^2}}{S_{11} + S_{22} + \epsilon}$$
 
 Brushstrokes follow the isophote tangent angle $\alpha = \theta + \frac{\pi}{2}$ in high-coherence regions and drift smoothly toward a soft diagonal ($0.7\text{ rad}$) in flat regions.
 
