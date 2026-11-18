@@ -5,597 +5,91 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Bloom &amp; Brushstroke — Procedural Portrait &amp; Letter Studio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,500;1,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=EB+Garamond:ital@0;1&family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400;1,6..72,500&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #050304;
-    --gold: #f6d79e;
-    --rose: #f4b8d0;
-    --ivory: #f1dfc9;
-  }
-  html, body {
-    margin: 0;
-    height: 100%;
-    background: #050304;
-    overflow: hidden;
-    font-family: Georgia, serif;
-    color: #f4e8dc;
-    -webkit-font-smoothing: antialiased;
-  }
-  canvas#view {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    display: block;
-    z-index: 1;
-  }
+  :root { --bg:#050304; --ink:#ece3d8; --muted:#9b9189; --line:#3a3236; --panel:#141012; --field:#0d0a0b; --accent:#d9b98a; --serif:"Newsreader",Georgia,serif; --sans:"Instrument Sans",system-ui,sans-serif; }
+  html,body { margin:0; height:100%; background:var(--bg); overflow:hidden; font-family:var(--serif); color:var(--ink); -webkit-font-smoothing:antialiased; }
+  canvas#view { position:fixed; inset:0; width:100%; height:100%; display:block; z-index:1; }
+  button { font-family:inherit; }
+  button:focus-visible,input:focus-visible,textarea:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 
-  /* ---------- Bottom Caption & Actions ---------- */
-  #cap {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: max(20px, env(safe-area-inset-bottom));
-    text-align: center;
-    padding: 0 20px;
-    opacity: 0;
-    transition: opacity 2.6s ease;
-    pointer-events: none;
-    z-index: 5;
-  }
-  #cap.on { opacity: 1; }
-  #cap::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: -20px;
-    height: 190%;
-    z-index: -1;
-    background: linear-gradient(to top, rgba(5,3,4,.94) 0%, rgba(5,3,4,.72) 45%, rgba(5,3,4,0) 100%);
-  }
+  /* Caption + letter trigger */
+  #cap { position:fixed; left:0; right:0; bottom:max(20px,env(safe-area-inset-bottom)); text-align:center; padding:0 20px; opacity:0; transition:opacity 2.6s ease; pointer-events:none; z-index:5; }
+  #cap.on { opacity:1; }
+  #cap::before { content:""; position:absolute; left:0; right:0; bottom:-20px; height:190%; z-index:-1; background:linear-gradient(to top,rgba(5,3,4,.94),rgba(5,3,4,.7) 45%,rgba(5,3,4,0)); }
+  #cap h1 { margin:0; font:italic 400 clamp(26px,4vw,44px)/1.15 var(--serif); }
+  .cap-actions { display:flex; justify-content:center; align-items:center; gap:18px; margin-top:12px; }
+  #messageBtn { pointer-events:auto; cursor:pointer; padding:9px 16px; background:transparent; font:500 14px/1 var(--serif); transition:background .2s,color .2s,border-color .2s; }
+  #sig { pointer-events:auto; cursor:pointer; margin:0; padding:9px 4px; background:none; border:0; font:400 14px/1 var(--serif); color:var(--muted); transition:color .2s; }
+  #sig:hover { color:var(--ink); }
+  body[data-theme="royal"] #cap h1 { color:#ecd3a4; }
+  body[data-theme="royal"] #messageBtn { border:1px solid #b99a6b; border-radius:999px; color:#ecd3a4; }
+  body[data-theme="royal"] #messageBtn:hover { background:#ecd3a4; color:#1a1114; }
+  body[data-theme="ivory"] #cap h1 { color:#f1e6d6; font-family:"EB Garamond",var(--serif); letter-spacing:.01em; }
+  body[data-theme="ivory"] #messageBtn { border:1px solid #8f8478; border-radius:2px; color:#f1e6d6; }
+  body[data-theme="ivory"] #messageBtn:hover { background:#f1e6d6; color:#1a1517; }
 
-  /* Theme 1: Royal Gold & Rose (Riya5 style) */
-  body[data-theme="royal"] #cap h1 {
-    margin: 0;
-    font: italic 500 clamp(24px, 4vw, 44px)/1.15 "Cormorant Garamond", "Playfair Display", Georgia, serif;
-    letter-spacing: .01em;
-    background: linear-gradient(100deg, #f6d79e 0%, #ffeccf 38%, #f4b8d0 72%, #f6d79e 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    filter: drop-shadow(0 0 16px rgba(255, 180, 140, .35));
-  }
-  body[data-theme="royal"] #messageBtn {
-    pointer-events: auto;
-    border: 1px solid rgba(246,215,158,.48);
-    border-radius: 999px;
-    padding: 8px 16px;
-    cursor: pointer;
-    background: rgba(38,16,27,.64);
-    color: #f6d79e;
-    font: 500 10px/1 Georgia, serif;
-    letter-spacing: .22em;
-    text-transform: uppercase;
-    box-shadow: 0 0 18px rgba(246,200,76,.10);
-    transition: .25s ease;
-    backdrop-filter: blur(8px);
-  }
-  body[data-theme="royal"] #messageBtn:hover {
-    color: #fff0ce;
-    border-color: rgba(255,226,170,.9);
-    box-shadow: 0 0 24px rgba(246,200,76,.25);
-  }
-  body[data-theme="royal"] #sig {
-    pointer-events: auto;
-    margin: 0;
-    padding: 8px 4px;
-    background: none;
-    border: 0;
-    cursor: pointer;
-    font: 500 10px/1 Georgia, serif;
-    letter-spacing: .28em;
-    text-transform: uppercase;
-    color: rgba(246,215,158,.62);
-    transition: color .25s;
-  }
-  body[data-theme="royal"] #sig:hover { color: #ffe9bd; }
+  /* Letter */
+  #overlay { position:fixed; inset:0; z-index:20; padding:20px; display:flex; align-items:center; justify-content:center; background:rgba(4,2,5,.88); opacity:0; pointer-events:none; transition:opacity .35s; }
+  #overlay.open { opacity:1; pointer-events:auto; }
+  .card { width:min(440px,100%); max-height:88vh; overflow:auto; box-sizing:border-box; padding:30px 28px 22px; background:#171114; border:1px solid #4a3f43; transform:translateY(10px); transition:transform .35s; }
+  body[data-theme="royal"] .card { border-radius:6px; }
+  body[data-theme="ivory"] .card { border-radius:2px; }
+  #overlay.open .card { transform:none; }
+  .card h2 { margin:0 0 16px; font:italic 400 30px/1.1 var(--serif); color:#ecd3a4; }
+  .card p { margin:0 0 13px; font:400 16px/1.65 var(--serif); }
+  .card .flowers-note { margin-top:16px; padding-top:12px; border-top:1px solid var(--line); color:#c9b3a8; font:italic 15px/1.55 var(--serif); }
+  .card .signoff { margin-top:8px; text-align:right; font:italic 17px var(--serif); color:#ecd3a4; }
+  .actions { display:flex; justify-content:flex-end; gap:10px; margin-top:18px; }
+  .btn { border:1px solid #6b5d60; border-radius:3px; padding:8px 14px; background:transparent; color:var(--ink); cursor:pointer; font:500 13px var(--sans); }
+  .btn:hover { background:#2a2024; }
 
-  /* Theme 2: Editorial Ivory (For_Shreya style) */
-  body[data-theme="ivory"] #cap h1 {
-    margin: 0;
-    color: #f1dfc9;
-    font: italic 500 clamp(26px, 4.1vw, 44px)/1.14 "Cormorant Garamond", Georgia, serif;
-    letter-spacing: .015em;
-    text-shadow: 0 2px 24px rgba(0,0,0,.28);
-  }
-  body[data-theme="ivory"] #messageBtn {
-    pointer-events: auto;
-    border: 1px solid rgba(232,211,187,.42);
-    border-radius: 2px;
-    padding: 10px 15px;
-    cursor: pointer;
-    background: rgba(20,12,15,.48);
-    color: #ead7bf;
-    font: 500 10px/1 Georgia, serif;
-    letter-spacing: .19em;
-    text-transform: uppercase;
-    transition: background .25s ease, border-color .25s ease, color .25s ease;
-    backdrop-filter: blur(6px);
-  }
-  body[data-theme="ivory"] #messageBtn:hover {
-    color: #fff7ed;
-    border-color: rgba(255,239,218,.78);
-    background: rgba(42,23,28,.72);
-  }
-  body[data-theme="ivory"] #sig {
-    pointer-events: auto;
-    margin: 0;
-    padding: 8px 4px;
-    background: none;
-    border: 0;
-    cursor: pointer;
-    font: 500 10px/1 Georgia, serif;
-    letter-spacing: .20em;
-    text-transform: uppercase;
-    color: rgba(234,215,191,.68);
-    transition: color .25s;
-  }
-  body[data-theme="ivory"] #sig:hover { color: #ffe9bd; }
-
-  .cap-actions {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 18px;
-    margin-top: 10px;
-  }
-
-  /* ---------- Letter Modal Overlay ---------- */
-  #overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 20;
-    padding: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(4,2,5,.72);
-    backdrop-filter: blur(7px);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity .4s ease;
-  }
-  #overlay.open {
-    opacity: 1;
-    pointer-events: auto;
-  }
-  .card {
-    width: min(440px, 100%);
-    max-height: 86vh;
-    overflow-y: auto;
-    box-sizing: border-box;
-    padding: 28px 25px 22px;
-    border-radius: 18px;
-    transform: translateY(12px) scale(.98);
-    transition: transform .4s ease;
-  }
-  #overlay.open .card {
-    transform: translateY(0) scale(1);
-  }
-  body[data-theme="royal"] .card {
-    color: #f4e8dc;
-    background: linear-gradient(145deg, rgba(31,13,23,.97), rgba(12,8,15,.97));
-    border: 1px solid rgba(246,215,158,.42);
-    box-shadow: 0 18px 60px rgba(0,0,0,.72), 0 0 36px rgba(239,164,180,.12);
-  }
-  body[data-theme="ivory"] .card {
-    color: #f1e8df;
-    background: rgba(24,17,19,.97);
-    border: 1px solid rgba(226,207,187,.30);
-    box-shadow: 0 22px 70px rgba(0,0,0,.58);
-  }
-  .card h2 {
-    margin: 0 0 15px;
-    font: italic 500 31px/1.1 "Cormorant Garamond", Georgia, serif;
-  }
-  body[data-theme="royal"] .card h2 { color: #f6d79e; }
-  body[data-theme="ivory"] .card h2 { color: #ead5bd; }
-
-  .card p {
-    margin: 0 0 13px;
-    font: 14px/1.7 Georgia, serif;
-    color: #e9ded5;
-  }
-  .card .flowers-note {
-    margin-top: 16px;
-    padding-top: 12px;
-    border-top: 1px solid rgba(255,255,255,.10);
-    color: #d6b7ad;
-    font: italic 13px/1.6 "Cormorant Garamond", Georgia, serif;
-  }
-  .card .signoff {
-    margin-top: 6px;
-    text-align: right;
-    font: italic 15px Georgia, serif;
-  }
-  body[data-theme="royal"] .card .signoff { color: #f6d79e; }
-  body[data-theme="ivory"] .card .signoff { color: #ead5bd; }
-
-  .actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 18px;
-  }
-  .btn {
-    padding: 8px 15px;
-    cursor: pointer;
-    font: 11px Georgia, serif;
-    transition: .2s ease;
-  }
-  body[data-theme="royal"] .btn {
-    border: 1px solid rgba(246,215,158,.38);
-    border-radius: 999px;
-    background: rgba(255,255,255,.045);
-    color: #f0e1d5;
-  }
-  body[data-theme="royal"] .btn:hover {
-    background: rgba(246,200,76,.14);
-    border-color: rgba(246,215,158,.8);
-    color: #fff1ce;
-  }
-  body[data-theme="ivory"] .btn {
-    border: 1px solid rgba(226,207,187,.30);
-    border-radius: 2px;
-    background: rgba(255,255,255,.035);
-    color: #e9ddd2;
-  }
-  body[data-theme="ivory"] .btn:hover {
-    background: rgba(226,207,187,.10);
-    border-color: rgba(226,207,187,.65);
-    color: #fff7ed;
-  }
-
-  /* ---------- Studio Top Bar & Drawer ---------- */
-  #studioTopBar {
-    position: fixed;
-    top: max(14px, env(safe-area-inset-top));
-    right: 16px;
-    z-index: 30;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: opacity .3s ease;
-  }
-  .studio-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    border: 1px solid rgba(246,215,158,.35);
-    border-radius: 999px;
-    padding: 8px 14px;
-    background: rgba(18,10,15,.78);
-    color: #f6d79e;
-    font: 500 11px/1 "Inter", sans-serif;
-    letter-spacing: .04em;
-    cursor: pointer;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 8px 24px rgba(0,0,0,.45);
-    transition: all .2s ease;
-    text-decoration: none;
-  }
-  .studio-pill:hover {
-    background: rgba(38,18,28,.92);
-    border-color: rgba(246,215,158,.8);
-    color: #fff3d6;
-    transform: translateY(-1px);
-  }
-  .studio-pill.primary {
-    background: linear-gradient(135deg, rgba(246,215,158,.22), rgba(244,184,208,.18));
-    border-color: rgba(246,215,158,.65);
-  }
-  .progress-badge {
-    font-variant-numeric: tabular-nums;
-    font-size: 10px;
-    color: rgba(246,215,158,.75);
-    padding: 6px 11px;
-    border-radius: 999px;
-    background: rgba(14,8,12,.68);
-    border: 1px solid rgba(255,255,255,.08);
-    backdrop-filter: blur(8px);
-    font-family: "Inter", sans-serif;
-  }
-
-  #studioDrawer {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: min(410px, 100vw);
-    z-index: 40;
-    background: rgba(14, 9, 13, 0.96);
-    border-left: 1px solid rgba(246, 215, 158, 0.25);
-    box-shadow: -20px 0 60px rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(16px);
-    display: flex;
-    flex-direction: column;
-    transform: translateX(102%);
-    transition: transform .35s cubic-bezier(0.16, 1, 0.3, 1);
-    font-family: "Inter", sans-serif;
-  }
-  #studioDrawer.open {
-    transform: translateX(0);
-  }
-  .drawer-header {
-    padding: 18px 20px 14px;
-    border-bottom: 1px solid rgba(255,255,255,.08);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .drawer-header h3 {
-    margin: 0;
-    font: italic 600 22px/1.1 "Cormorant Garamond", Georgia, serif;
-    color: #f6d79e;
-  }
-  .drawer-header span {
-    display: block;
-    font: 400 11px/1.3 "Inter", sans-serif;
-    color: rgba(244,232,220,.55);
-    margin-top: 2px;
-  }
-  .close-drawer {
-    background: rgba(255,255,255,.06);
-    border: 1px solid rgba(255,255,255,.12);
-    color: #f4e8dc;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    transition: .2s;
-  }
-  .close-drawer:hover {
-    background: rgba(246,215,158,.2);
-    border-color: rgba(246,215,158,.6);
-  }
-
-  .drawer-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 18px 20px 28px;
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-  }
-  .drawer-body::-webkit-scrollbar { width: 5px; }
-  .drawer-body::-webkit-scrollbar-thumb { background: rgba(246,215,158,.25); border-radius: 99px; }
-
-  .studio-section {
-    background: rgba(255,255,255,.025);
-    border: 1px solid rgba(255,255,255,.07);
-    border-radius: 12px;
-    padding: 14px 15px;
-  }
-  .studio-section-title {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: .1em;
-    color: #f6d79e;
-    margin: 0 0 11px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  /* Photo Dropzone */
-  .dropzone {
-    border: 1.5px dashed rgba(246,215,158,.4);
-    border-radius: 10px;
-    padding: 16px 12px;
-    text-align: center;
-    cursor: pointer;
-    background: rgba(246,215,158,.03);
-    transition: .2s ease;
-    position: relative;
-  }
-  .dropzone:hover, .dropzone.dragover {
-    background: rgba(246,215,158,.09);
-    border-color: rgba(246,215,158,.85);
-  }
-  .dropzone input[type="file"] {
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    cursor: pointer;
-    width: 100%;
-    height: 100%;
-  }
-  .dropzone-title {
-    font-size: 12.5px;
-    font-weight: 500;
-    color: #f6d79e;
-    margin-bottom: 4px;
-  }
-  .dropzone-sub {
-    font-size: 11px;
-    color: rgba(244,232,220,.58);
-    line-height: 1.4;
-  }
-
-  .preset-row {
-    display: flex;
-    gap: 7px;
-    margin-top: 10px;
-  }
-  .mini-btn {
-    flex: 1;
-    padding: 7px 9px;
-    border-radius: 7px;
-    border: 1px solid rgba(255,255,255,.12);
-    background: rgba(255,255,255,.04);
-    color: #e9ded5;
-    font: 500 11px/1.2 "Inter", sans-serif;
-    cursor: pointer;
-    transition: .2s;
-  }
-  .mini-btn:hover, .mini-btn.active {
-    background: rgba(246,215,158,.18);
-    border-color: rgba(246,215,158,.65);
-    color: #fff2d4;
-  }
-
-  /* Form Controls */
-  .field-group {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    margin-bottom: 11px;
-  }
-  .field-group:last-child { margin-bottom: 0; }
-  .field-label {
-    font-size: 11px;
-    color: rgba(244,232,220,.75);
-    display: flex;
-    justify-content: space-between;
-  }
-  .field-input, .field-textarea {
-    width: 100%;
-    box-sizing: border-box;
-    background: rgba(0,0,0,.38);
-    border: 1px solid rgba(255,255,255,.13);
-    border-radius: 7px;
-    padding: 8px 10px;
-    color: #f8efe6;
-    font: 12.5px/1.4 "Inter", sans-serif;
-    outline: none;
-    transition: border-color .2s;
-  }
-  .field-input:focus, .field-textarea:focus {
-    border-color: rgba(246,215,158,.75);
-  }
-  .field-textarea {
-    resize: vertical;
-    min-height: 92px;
-    line-height: 1.55;
-  }
-
-  .slider-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-  .slider-item {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-  .slider-item label {
-    font-size: 10.5px;
-    color: rgba(244,232,220,.72);
-    display: flex;
-    justify-content: space-between;
-  }
-  .slider-item input[type="range"] {
-    width: 100%;
-    accent-color: #f6d79e;
-    cursor: pointer;
-  }
-
-  .toggle-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 11.5px;
-    color: rgba(244,232,220,.85);
-    margin-top: 10px;
-    padding-top: 9px;
-    border-top: 1px solid rgba(255,255,255,.06);
-  }
-  .toggle-row input[type="checkbox"] {
-    accent-color: #f6d79e;
-    width: 15px;
-    height: 15px;
-    cursor: pointer;
-  }
-
-  .drawer-footer {
-    padding: 14px 20px;
-    border-top: 1px solid rgba(255,255,255,.08);
-    background: rgba(10,6,9,.95);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .action-btn {
-    width: 100%;
-    padding: 10px 14px;
-    border-radius: 8px;
-    font: 600 12px/1.2 "Inter", sans-serif;
-    cursor: pointer;
-    transition: .2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-  }
-  .action-btn.replay {
-    background: rgba(255,255,255,.06);
-    border: 1px solid rgba(246,215,158,.35);
-    color: #f6d79e;
-  }
-  .action-btn.replay:hover {
-    background: rgba(246,215,158,.15);
-    border-color: rgba(246,215,158,.75);
-  }
-  .action-btn.export {
-    background: linear-gradient(135deg, #f6d79e 0%, #e7b872 50%, #f4b8d0 100%);
-    border: none;
-    color: #1a0b12;
-    box-shadow: 0 4px 20px rgba(246,215,158,.28);
-  }
-  .action-btn.export:hover {
-    filter: brightness(1.07);
-    box-shadow: 0 6px 26px rgba(246,215,158,.42);
-    transform: translateY(-1px);
-  }
-
-  /* Toast Notification */
-  #toast {
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%) translateY(-20px);
-    z-index: 60;
-    background: rgba(25, 13, 20, 0.95);
-    border: 1px solid rgba(246, 215, 158, 0.6);
-    color: #ffeccf;
-    padding: 10px 18px;
-    border-radius: 999px;
-    font: 500 12px/1.3 "Inter", sans-serif;
-    box-shadow: 0 12px 32px rgba(0,0,0,.6);
-    opacity: 0;
-    pointer-events: none;
-    transition: all .3s ease;
-  }
-  #toast.show {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-
-  @media (max-width: 520px) {
-    .card { padding: 24px 20px 19px; }
-    .card p { font-size: 13px; }
-    .cap-actions { gap: 12px; }
-    #messageBtn { letter-spacing: .14em; padding: 8px 12px; }
-    #studioTopBar { left: 12px; right: 12px; justify-content: space-between; }
-  }
+  /* Studio chrome */
+  #studioTopBar { position:fixed; top:max(14px,env(safe-area-inset-top)); left:16px; right:16px; z-index:30; display:flex; justify-content:space-between; align-items:center; gap:10px; font-family:var(--sans); }
+  .progress-badge { font:400 12px var(--sans); color:var(--muted); font-variant-numeric:tabular-nums; }
+  .studio-pill { background:#141012; color:var(--ink); border:1px solid var(--line); border-radius:3px; padding:8px 13px; font:500 13px var(--sans); cursor:pointer; }
+  .studio-pill:hover { border-color:#6b5d60; }
+  .studio-pill.primary { background:var(--ink); color:#150f11; border-color:var(--ink); }
+  #studioDrawer { position:fixed; top:0; right:0; bottom:0; width:min(380px,100%); z-index:40; display:flex; flex-direction:column; background:var(--panel); border-left:1px solid var(--line); font:400 14px/1.4 var(--sans); transform:translateX(100%); transition:transform .3s ease; visibility:hidden; }
+  #studioDrawer.open { transform:none; visibility:visible; }
+  .drawer-header { display:flex; justify-content:space-between; align-items:flex-start; padding:18px 20px 14px; border-bottom:1px solid var(--line); }
+  .drawer-header h3 { margin:0; font:500 22px/1.2 var(--serif); }
+  .drawer-header span { color:var(--muted); font-size:12px; }
+  .close-drawer { background:none; border:0; color:var(--muted); font-size:16px; cursor:pointer; padding:4px 6px; }
+  .close-drawer:hover { color:var(--ink); }
+  .drawer-body { flex:1; overflow:auto; padding:6px 20px 16px; }
+  .studio-section { padding:16px 0; border-bottom:1px solid var(--line); }
+  .studio-section:last-child { border-bottom:0; }
+  .studio-section-title { display:flex; justify-content:space-between; align-items:center; font:600 13px var(--sans); margin-bottom:10px; }
+  .studio-section-title span+span,.studio-section-title label { font-weight:400; color:var(--muted); font-size:12px; }
+  .hint { font-size:12px; color:var(--muted); margin-bottom:10px; }
+  .dropzone { position:relative; border:1px dashed #5a4e52; border-radius:3px; padding:18px 14px; text-align:center; background:var(--field); }
+  .dropzone.dragover { border-color:var(--accent); background:#19120f; }
+  .dropzone input[type=file] { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
+  .dropzone-title { font-weight:500; }
+  .dropzone-sub { color:var(--muted); font-size:12px; margin-top:4px; }
+  .toggle-row { display:flex; justify-content:space-between; align-items:center; gap:10px; margin:12px 0; font-size:13px; }
+  input[type=checkbox],input[type=range] { accent-color:var(--accent); }
+  .preset-row { display:flex; gap:8px; }
+  .mini-btn { flex:1; padding:8px 10px; background:transparent; color:var(--ink); border:1px solid var(--line); border-radius:3px; font:500 13px var(--sans); cursor:pointer; }
+  .mini-btn:hover { border-color:#6b5d60; }
+  .mini-btn.active { border-color:var(--accent); background:#1d1713; }
+  .slider-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px 16px; }
+  .slider-item label { display:flex; justify-content:space-between; font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .slider-item input { width:100%; margin:6px 0 0; }
+  .field-group { margin-bottom:12px; }
+  .field-label { display:block; font-size:12px; color:var(--muted); margin-bottom:5px; }
+  .field-input,.field-textarea { width:100%; box-sizing:border-box; background:var(--field); color:var(--ink); border:1px solid var(--line); border-radius:3px; padding:8px 10px; font:400 14px/1.45 var(--sans); }
+  .field-textarea { min-height:150px; resize:vertical; }
+  .drawer-footer { display:flex; flex-direction:column; gap:8px; padding:14px 20px calc(14px + env(safe-area-inset-bottom)); border-top:1px solid var(--line); }
+  .action-btn { padding:10px 14px; border-radius:3px; border:1px solid var(--line); background:transparent; color:var(--ink); font:500 14px var(--sans); cursor:pointer; }
+  .action-btn.export { background:var(--ink); color:#150f11; border-color:var(--ink); }
+  .action-btn:hover { border-color:#8a7a7e; }
+  #toast { position:fixed; left:50%; bottom:24px; transform:translate(-50%,12px); z-index:60; background:var(--ink); color:#150f11; padding:9px 14px; border-radius:3px; font:500 13px var(--sans); opacity:0; pointer-events:none; transition:opacity .25s,transform .25s; }
+  #toast.show { opacity:1; transform:translate(-50%,0); }
+  @media (max-width:520px) { .card { padding:24px 20px 18px; } .card p { font-size:15px; } .cap-actions { gap:10px; } }
+  @media (prefers-reduced-motion:reduce) { * { transition:none !important; } }
 </style>
 </head>
 <body data-theme="royal">
@@ -605,25 +99,25 @@
 <!-- Top Studio Bar (stripped out when exporting standalone gift HTML) -->
 <div id="studioTopBar">
   <span class="progress-badge" id="paintStatus">Painting · 0%</span>
-  <div style="display:flex; gap:8px;">
-    <button class="studio-pill" id="fastFinishBtn" type="button" title="Complete painting immediately">⚡ Instant Bloom</button>
-    <button class="studio-pill primary" id="openStudioBtn" type="button">✨ Customize Gift Studio</button>
+  <div style="display:flex;gap:8px;">
+    <button class="studio-pill" id="fastFinishBtn" type="button" title="Complete painting immediately">Finish painting</button>
+    <button class="studio-pill primary" id="openStudioBtn" type="button">Open studio</button>
   </div>
 </div>
 
 <!-- Artwork Bottom Caption & Letter Triggers -->
 <div id="cap">
-  <h1 id="line">The cutest and most beautiful person ever</h1>
+  <h1 id="line">For someone who makes the world brighter</h1>
   <div class="cap-actions">
-    <button id="messageBtn" type="button">A Little Note · For You</button>
-    <button id="sig" type="button" title="paint again">Bloom Again ↻</button>
+    <button id="messageBtn" type="button">A note for you</button>
+    <button id="sig" type="button" title="paint again">Paint again</button>
   </div>
 </div>
 
 <!-- Personalized Letter Modal -->
 <div id="overlay" role="dialog" aria-modal="true" aria-hidden="true">
   <div class="card">
-    <h2 id="letterHeading">dear muse,</h2>
+    <h2 id="letterHeading">Dear friend,</h2>
     <div id="letterBodyContainer">
       <p>
         Some people have a way of making the world feel a little softer and brighter just by being in it.
@@ -636,10 +130,10 @@
     <div class="flowers-note" id="letterFlowers">
       sunflowers, lotus, parijat &amp; white camellias — a little piece of art, blooming just for you.
     </div>
-    <div class="signoff" id="letterSignoff">— with love</div>
+    <div class="signoff" id="letterSignoff">With love</div>
     <div class="actions">
-      <button class="btn" id="replayBtn" type="button">bloom again</button>
-      <button class="btn" id="closeBtn" type="button">close</button>
+      <button class="btn" id="replayBtn" type="button">Paint again</button>
+      <button class="btn" id="closeBtn" type="button">Close</button>
     </div>
   </div>
 </div>
@@ -649,45 +143,45 @@
   <div class="drawer-header">
     <div>
       <h3>Bloom &amp; Brushstroke</h3>
-      <span>Procedural Structure-Tensor Portrait &amp; Gift Studio</span>
+      <span>Portrait and letter studio</span>
     </div>
-    <button class="close-drawer" id="closeStudioBtn" type="button" title="Close Studio">✕</button>
+    <button class="close-drawer" id="closeStudioBtn" type="button" title="Close studio">Close</button>
   </div>
 
   <div class="drawer-body">
     <!-- Section 1: Photo Upload & Masking -->
     <div class="studio-section">
       <div class="studio-section-title">
-        <span>1. Portrait Photograph</span>
-        <span id="imgDimLabel" style="font-weight:400; color:rgba(246,215,158,.6);">Default Muse</span>
+        <span>Photo</span>
+        <span id="imgDimLabel">Default Muse</span>
       </div>
       <div class="dropzone" id="dropzone">
         <input type="file" id="photoInput" accept="image/png,image/jpeg,image/webp">
-        <div class="dropzone-title">📷 Upload Any Portrait Photo</div>
-        <div class="dropzone-sub">Drag &amp; drop or click (PNG cutout, JPG, or WebP).<br>Processed 100% locally in your browser.</div>
+        <div class="dropzone-title">Upload a photo</div>
+        <div class="dropzone-sub">Drop a PNG, JPG or WebP here, or click to choose.<br>Photos stay in your browser.</div>
       </div>
 
       <div class="toggle-row">
-        <label for="vignetteMaskToggle" style="cursor:pointer;">Soft Vignette Cutout (for rectangular photos)</label>
+        <label for="vignetteMaskToggle">Soft vignette cutout (for opaque photos)</label>
         <input type="checkbox" id="vignetteMaskToggle">
       </div>
 
       <div class="preset-row">
-        <button class="mini-btn active" id="presetMuseBtn" type="button">🎨 Default Muse</button>
-        <button class="mini-btn" id="replayNowBtn" type="button">🔄 Repaint Canvas</button>
+        <button class="mini-btn active" id="presetMuseBtn" type="button">Sample portrait</button>
+        <button class="mini-btn" id="replayNowBtn" type="button">Repaint</button>
       </div>
     </div>
 
     <!-- Section 2: Face Focus Ellipse Calibrator -->
     <div class="studio-section">
       <div class="studio-section-title">
-        <span>2. Face Focus Detail Region</span>
-        <label style="font-size:10px; font-weight:400; text-transform:none; display:flex; align-items:center; gap:4px; cursor:pointer;">
-          <input type="checkbox" id="showFaceGuideToggle" style="accent-color:#f6d79e;"> Show Guide Ring
+        <span>Face detail region</span>
+        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;">
+          <input type="checkbox" id="showFaceGuideToggle"> Show guide
         </label>
       </div>
-      <div style="font-size:11px; color:rgba(244,232,220,.6); margin-bottom:10px; line-height:1.4;">
-        Layer 6 concentrates fine micro-strokes and blends lifelike facial clarity inside this ellipse:
+      <div class="hint">
+        The finest brushwork and the photo-true detail are limited to this ellipse.
       </div>
       <div class="slider-grid">
         <div class="slider-item">
@@ -711,69 +205,69 @@
 
     <!-- Section 3: Aesthetic Theme -->
     <div class="studio-section">
-      <div class="studio-section-title"><span>3. Visual Theme</span></div>
+      <div class="studio-section-title"><span>Theme</span></div>
       <div class="preset-row" style="margin-top:0;">
-        <button class="mini-btn active" id="themeRoyalBtn" type="button">✨ Royal Gold &amp; Rose</button>
-        <button class="mini-btn" id="themeIvoryBtn" type="button">🤍 Editorial Ivory</button>
+        <button class="mini-btn active" id="themeRoyalBtn" type="button">Royal gold and rose</button>
+        <button class="mini-btn" id="themeIvoryBtn" type="button">Editorial ivory</button>
       </div>
     </div>
 
     <!-- Section 4: Caption & Personalized Letter -->
     <div class="studio-section">
-      <div class="studio-section-title"><span>4. Personalized Letter &amp; Captions</span></div>
+      <div class="studio-section-title"><span>Text</span></div>
 
       <div class="field-group">
-        <label class="field-label">Page &amp; Gift Title</label>
-        <input type="text" class="field-input" id="inputPageTitle" value="A bouquet in brushstrokes">
+        <label class="field-label">Page title</label>
+        <input type="text" class="field-input" id="inputPageTitle" value="A portrait in brushstrokes">
       </div>
 
       <div class="field-group">
-        <label class="field-label">Portrait Bottom Caption</label>
-        <input type="text" class="field-input" id="inputCaption" value="The cutest and most beautiful person ever">
+        <label class="field-label">Caption</label>
+        <input type="text" class="field-input" id="inputCaption" value="For someone who makes the world brighter">
       </div>
 
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:11px;">
         <div class="field-group" style="margin-bottom:0;">
-          <label class="field-label">Note Button Label</label>
-          <input type="text" class="field-input" id="inputMsgBtn" value="A Little Note · For You">
+          <label class="field-label">Letter button</label>
+          <input type="text" class="field-input" id="inputMsgBtn" value="A note for you">
         </div>
         <div class="field-group" style="margin-bottom:0;">
-          <label class="field-label">Replay Button Label</label>
-          <input type="text" class="field-input" id="inputSigBtn" value="Bloom Again ↻">
+          <label class="field-label">Replay button</label>
+          <input type="text" class="field-input" id="inputSigBtn" value="Paint again">
         </div>
       </div>
 
       <div class="field-group">
-        <label class="field-label">Letter Salutation</label>
-        <input type="text" class="field-input" id="inputSalutation" value="dear muse,">
+        <label class="field-label">Salutation</label>
+        <input type="text" class="field-input" id="inputSalutation" value="Dear friend,">
       </div>
 
       <div class="field-group">
-        <label class="field-label">Letter Paragraphs (separate paragraphs with a blank line)</label>
+        <label class="field-label">Letter (blank line between paragraphs)</label>
         <textarea class="field-textarea" id="inputLetterBody">Some people have a way of making the world feel a little softer and brighter just by being in it. Your warmth, your kindness, and all the little moments that make you who you are mean more than words can easily capture.
 
 May every stroke of light in this portrait remind you how deeply you are appreciated, and may the days ahead bring you endless peace, laughter, and a thousand little reasons to smile.</textarea>
       </div>
 
       <div class="field-group">
-        <label class="field-label">Botanical / Flowers Note</label>
+        <label class="field-label">Flowers note</label>
         <input type="text" class="field-input" id="inputFlowersNote" value="sunflowers, lotus, parijat & white camellias — a little piece of art, blooming just for you.">
       </div>
 
       <div class="field-group">
         <label class="field-label">Sign-off</label>
-        <input type="text" class="field-input" id="inputSignoff" value="— with love">
+        <input type="text" class="field-input" id="inputSignoff" value="With love">
       </div>
     </div>
   </div>
 
   <div class="drawer-footer">
-    <button class="action-btn replay" id="applyAndReplayBtn" type="button">🎨 Apply Changes &amp; Replay Painting</button>
-    <button class="action-btn export" id="exportGiftBtn" type="button">🎁 Export Standalone Gift HTML</button>
+    <button class="action-btn replay" id="applyAndReplayBtn" type="button">Apply and repaint</button>
+    <button class="action-btn export" id="exportGiftBtn" type="button">Export gift HTML</button>
   </div>
 </aside>
 
-<div id="toast">Standalone Gift HTML exported!</div>
+<div id="toast">Gift file exported.</div>
 
 <script>
 "use strict";
@@ -1840,90 +1334,26 @@ function buildStandaloneGiftHTML() {
     .join("\n\n");
 
   const themeCSS = theme === "royal" ? `
-  #cap h1 {
-    margin: 0; font: italic 500 clamp(24px, 4vw, 44px)/1.15 "Cormorant Garamond", "Playfair Display", Georgia, serif;
-    letter-spacing: .01em;
-    background: linear-gradient(100deg, #f6d79e 0%, #ffeccf 38%, #f4b8d0 72%, #f6d79e 100%);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-    filter: drop-shadow(0 0 16px rgba(255, 180, 140, .35));
-  }
-  .cap-actions { display: flex; justify-content: center; align-items: center; gap: 18px; margin-top: 9px; }
-  #messageBtn {
-    pointer-events: auto; border: 1px solid rgba(246,215,158,.48);
-    border-radius: 999px; padding: 8px 16px; cursor: pointer;
-    background: rgba(38,16,27,.64); color: #f6d79e;
-    font: 500 10px/1 Georgia, serif; letter-spacing: .22em; text-transform: uppercase;
-    box-shadow: 0 0 18px rgba(246,200,76,.10); transition: .25s ease;
-    backdrop-filter: blur(8px);
-  }
-  #messageBtn:hover { color: #fff0ce; border-color: rgba(255,226,170,.9); box-shadow: 0 0 24px rgba(246,200,76,.25); }
-  #sig {
-    pointer-events: auto; margin: 0; padding: 8px 4px;
-    background: none; border: 0; cursor: pointer;
-    font: 500 10px/1 Georgia, serif; letter-spacing: .28em; text-transform: uppercase;
-    color: rgba(246,215,158,.62); transition: color .25s;
-  }
-  #sig:hover { color: #ffe9bd; }
-  .card {
-    width: min(430px, 100%); box-sizing: border-box;
-    padding: 28px 25px 22px; border-radius: 18px;
-    color: #f4e8dc; background: linear-gradient(145deg, rgba(31,13,23,.97), rgba(12,8,15,.97));
-    border: 1px solid rgba(246,215,158,.42);
-    box-shadow: 0 18px 60px rgba(0,0,0,.72), 0 0 36px rgba(239,164,180,.12);
-    transform: translateY(12px) scale(.98); transition: transform .4s ease;
-  }
-  .card h2 {
-    margin: 0 0 15px; color: #f6d79e;
-    font: italic 500 30px/1.1 "Cormorant Garamond", Georgia, serif;
-  }
-  .card .signoff { margin-top: 5px; color: #f6d79e; text-align: right; font: italic 15px Georgia, serif; }
-  .btn {
-    border: 1px solid rgba(246,215,158,.38); border-radius: 999px; padding: 8px 15px;
-    background: rgba(255,255,255,.045); color: #f0e1d5; cursor: pointer;
-    font: 11px Georgia, serif; transition: .2s ease;
-  }
-  .btn:hover { background: rgba(246,200,76,.14); border-color: rgba(246,215,158,.8); color: #fff1ce; }` : `
-  #cap h1 {
-    margin: 0; color: #f1dfc9;
-    font: italic 500 clamp(28px, 4.2vw, 46px)/1.12 "Cormorant Garamond", Georgia, serif;
-    letter-spacing: .015em; text-shadow: 0 2px 24px rgba(0,0,0,.28);
-  }
-  .cap-actions { display: flex; justify-content: center; align-items: center; gap: 18px; margin-top: 9px; }
-  #messageBtn {
-    pointer-events: auto; border: 1px solid rgba(232,211,187,.42);
-    border-radius: 2px; padding: 10px 15px; cursor: pointer;
-    background: rgba(20,12,15,.48); color: #ead7bf;
-    font: 500 10px/1 Georgia, serif; letter-spacing: .19em; text-transform: uppercase;
-    transition: background .25s ease, border-color .25s ease, color .25s ease;
-    backdrop-filter: blur(6px);
-  }
-  #messageBtn:hover { color: #fff7ed; border-color: rgba(255,239,218,.78); background: rgba(42,23,28,.72); }
-  #sig {
-    pointer-events: auto; margin: 0; padding: 8px 4px;
-    background: none; border: 0; cursor: pointer;
-    font: 500 10px/1 Georgia, serif; letter-spacing: .20em; text-transform: uppercase;
-    color: rgba(234,215,191,.68); transition: color .25s;
-  }
-  #sig:hover { color: #ffe9bd; }
-  .card {
-    width: min(430px, 100%); box-sizing: border-box;
-    padding: 28px 25px 22px; border-radius: 18px;
-    color: #f1e8df; background: rgba(24,17,19,.97);
-    border: 1px solid rgba(226,207,187,.30);
-    box-shadow: 0 22px 70px rgba(0,0,0,.58);
-    transform: translateY(12px) scale(.98); transition: transform .4s ease;
-  }
-  .card h2 {
-    margin: 0 0 17px; color: #ead5bd;
-    font: italic 500 32px/1.1 "Cormorant Garamond", Georgia, serif;
-  }
-  .card .signoff { margin-top: 5px; color: #ead5bd; text-align: right; font: italic 15px Georgia, serif; }
-  .btn {
-    border: 1px solid rgba(226,207,187,.30); border-radius: 2px; padding: 9px 15px;
-    background: rgba(255,255,255,.035); color: #e9ddd2; cursor: pointer;
-    font: 11px Georgia, serif; transition: .2s ease;
-  }
-  .btn:hover { background: rgba(226,207,187,.10); border-color: rgba(226,207,187,.65); color: #fff7ed; }`;
+  #cap h1 { margin: 0; color: #ecd3a4; font: italic 400 clamp(26px, 4vw, 44px)/1.15 "Newsreader", Georgia, serif; }
+  #messageBtn { pointer-events: auto; cursor: pointer; padding: 9px 16px; background: transparent; color: #ecd3a4; border: 1px solid #b99a6b; border-radius: 999px; font: 500 14px/1 "Newsreader", Georgia, serif; transition: background .2s, color .2s; }
+  #messageBtn:hover { background: #ecd3a4; color: #1a1114; }
+  #sig { pointer-events: auto; cursor: pointer; margin: 0; padding: 9px 4px; background: none; border: 0; color: #9b9189; font: 400 14px/1 "Newsreader", Georgia, serif; }
+  #sig:hover { color: #ece3d8; }
+  .card { width: min(440px, 100%); max-height: 88vh; overflow: auto; box-sizing: border-box; padding: 30px 28px 22px; border-radius: 6px; color: #ece3d8; background: #171114; border: 1px solid #4a3f43; transform: translateY(10px); transition: transform .35s; }
+  .card h2 { margin: 0 0 16px; color: #ecd3a4; font: italic 400 30px/1.1 "Newsreader", Georgia, serif; }
+  .card .signoff { margin-top: 8px; color: #ecd3a4; text-align: right; font: italic 17px "Newsreader", Georgia, serif; }
+  .btn { border: 1px solid #6b5d60; border-radius: 999px; padding: 8px 15px; background: transparent; color: #ece3d8; cursor: pointer; font: 500 14px "Newsreader", Georgia, serif; }
+  .btn:hover { background: #2a2024; }` : `
+  #cap h1 { margin: 0; color: #f1e6d6; font: italic 400 clamp(28px, 4.2vw, 46px)/1.12 "EB Garamond", Georgia, serif; letter-spacing: .01em; }
+  #messageBtn { pointer-events: auto; cursor: pointer; padding: 10px 16px; background: transparent; color: #f1e6d6; border: 1px solid #8f8478; border-radius: 2px; font: 500 14px/1 "EB Garamond", Georgia, serif; transition: background .2s, color .2s; }
+  #messageBtn:hover { background: #f1e6d6; color: #1a1517; }
+  #sig { pointer-events: auto; cursor: pointer; margin: 0; padding: 9px 4px; background: none; border: 0; color: #9b9189; font: 400 14px/1 "EB Garamond", Georgia, serif; }
+  #sig:hover { color: #ece3d8; }
+  .card { width: min(440px, 100%); max-height: 88vh; overflow: auto; box-sizing: border-box; padding: 30px 28px 22px; border-radius: 2px; color: #f1e8df; background: #181113; border: 1px solid #4a4044; transform: translateY(10px); transition: transform .35s; }
+  .card h2 { margin: 0 0 16px; color: #f1e6d6; font: italic 400 32px/1.1 "EB Garamond", Georgia, serif; }
+  .card .signoff { margin-top: 8px; color: #f1e6d6; text-align: right; font: italic 17px "EB Garamond", Georgia, serif; }
+  .btn { border: 1px solid #6b5d60; border-radius: 2px; padding: 9px 15px; background: transparent; color: #ece3d8; cursor: pointer; font: 500 14px "EB Garamond", Georgia, serif; }
+  .btn:hover { background: #2a2024; }`;
 
   return `<!doctype html>
 <html lang="en">
@@ -1932,7 +1362,7 @@ function buildStandaloneGiftHTML() {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${escapeHTML(pageTitle)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital@0;1&family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400;1,6..72,500&display=swap" rel="stylesheet">
 <style>
   html, body { margin: 0; height: 100%; background: #050304; overflow: hidden; }
   canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
@@ -1952,24 +1382,24 @@ function buildStandaloneGiftHTML() {
   #overlay {
     position: fixed; inset: 0; z-index: 20; padding: 20px;
     display: flex; align-items: center; justify-content: center;
-    background: rgba(4,2,5,.70); backdrop-filter: blur(7px);
+    background: rgba(4,2,5,.88);
     opacity: 0; pointer-events: none; transition: opacity .4s ease;
   }
   #overlay.open { opacity: 1; pointer-events: auto; }
   #overlay.open .card { transform: translateY(0) scale(1); }
-  .card p { margin: 0 0 13px; font: 14px/1.7 Georgia, serif; color: #e9ded5; }
+  .card p { margin: 0 0 13px; font: 400 16px/1.65 "Newsreader", Georgia, serif; color: #e9ded5; }
   .card .flowers-note {
     margin-top: 16px; padding-top: 12px;
     border-top: 1px solid rgba(255,255,255,.10);
-    color: #d6b7ad; font: italic 13px/1.6 "Cormorant Garamond", Georgia, serif;
+    color: #d6b7ad; font: italic 15px/1.55 "Newsreader", Georgia, serif;
   }
   .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
 ${themeCSS}
   @media (max-width: 520px) {
     .card { padding: 24px 20px 19px; }
-    .card p { font-size: 13px; }
+    .card p { font-size: 15px; }
     .cap-actions { gap: 12px; }
-    #messageBtn { letter-spacing: .14em; padding: 8px 12px; }
+    #messageBtn { padding: 8px 12px; }
   }
 </style>
 </head>
@@ -1994,8 +1424,8 @@ ${paragraphsHTML}
     <div class="signoff">${escapeHTML(signoff)}</div>
 
     <div class="actions">
-      <button class="btn" id="replayBtn" type="button">bloom again</button>
-      <button class="btn" id="closeBtn" type="button">close</button>
+      <button class="btn" id="replayBtn" type="button">Paint again</button>
+      <button class="btn" id="closeBtn" type="button">Close</button>
     </div>
   </div>
 </div>
