@@ -35,7 +35,7 @@
 No build tools, `npm install`, or servers required. Clone the repository and open `index.html` directly in any modern browser:
 
 ```bash
-git clone [https://github.com/LeagueStar/tensor-portrait-studio.git](https://github.com/LeagueStar/tensor-portrait-studio.git)
+git clone https://github.com/LeagueStar/tensor-portrait-studio.git
 cd tensor-portrait-studio
 open index.html   # or double-click index.html
 ```
