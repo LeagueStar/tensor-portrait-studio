@@ -1,4 +1,9 @@
 <!doctype html>
+<!--
+  Bloom & Brushstroke - Procedural Portrait & Letter Studio
+  Copyright (c) 2026 LeagueStar - https://github.com/LeagueStar
+  Released under the MIT License. The copyright notice and credit line must be kept in all copies.
+-->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -15,7 +20,7 @@
   button:focus-visible,input:focus-visible,textarea:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 
   /* Caption + letter trigger */
-  #cap { position:fixed; left:0; right:0; bottom:max(20px,env(safe-area-inset-bottom)); text-align:center; padding:0 20px; opacity:0; transition:opacity 2.6s ease; pointer-events:none; z-index:5; }
+  #cap { position:fixed; left:0; right:0; bottom:max(34px,env(safe-area-inset-bottom)); text-align:center; padding:0 20px; opacity:0; transition:opacity 2.6s ease; pointer-events:none; z-index:5; }
   #cap.on { opacity:1; }
   #cap::before { content:""; position:absolute; left:0; right:0; bottom:-20px; height:190%; z-index:-1; background:linear-gradient(to top,rgba(5,3,4,.94),rgba(5,3,4,.7) 45%,rgba(5,3,4,0)); }
   #cap h1 { margin:0; font:italic 400 clamp(26px,4vw,44px)/1.15 var(--serif); }
@@ -153,7 +158,7 @@
     <div class="studio-section">
       <div class="studio-section-title">
         <span>Photo</span>
-        <span id="imgDimLabel">Default Muse</span>
+        <span id="imgDimLabel">Sample portrait</span>
       </div>
       <div class="dropzone" id="dropzone">
         <input type="file" id="photoInput" accept="image/png,image/jpeg,image/webp">
@@ -1356,6 +1361,11 @@ function buildStandaloneGiftHTML() {
   .btn:hover { background: #2a2024; }`;
 
   return `<!doctype html>
+<!--
+  Bloom & Brushstroke - Procedural Portrait & Letter Studio
+  Copyright (c) 2026 LeagueStar - https://github.com/LeagueStar
+  Released under the MIT License. The copyright notice and credit line must be kept in all copies.
+-->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -1368,7 +1378,7 @@ function buildStandaloneGiftHTML() {
   canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
   #cap {
     position: fixed; left: 0; right: 0;
-    bottom: max(20px, env(safe-area-inset-bottom));
+    bottom: max(34px, env(safe-area-inset-bottom));
     text-align: center; padding: 0 20px;
     opacity: 0; transition: opacity 2.6s ease; pointer-events: none;
     z-index: 5;
@@ -1704,6 +1714,18 @@ const img = new Image();
 img.onload = () => { setup(img); requestAnimationFrame(frame); };
 img.src = PHOTO;
 <\/script>
+<script>
+(function () {
+  var CSS = "position:fixed!important;left:0!important;right:0!important;bottom:max(6px,env(safe-area-inset-bottom))!important;z-index:6!important;display:block!important;visibility:visible!important;opacity:.7!important;text-align:center!important;pointer-events:auto!important;font:400 12px/1.2 'Newsreader',Georgia,serif!important;color:#b9aea4!important;";
+  function put() {
+    var d = document.getElementById("lsCredit");
+    if (!d) { d = document.createElement("div"); d.id = "lsCredit"; document.body.appendChild(d);
+      d.innerHTML = '\\u00a9 2026 <a href="https://github.com/LeagueStar" target="_blank" rel="noopener" style="color:inherit!important;text-decoration:underline!important">LeagueStar</a>. Made with <a href="https://github.com/LeagueStar/tensor-portrait-studio" target="_blank" rel="noopener" style="color:inherit!important;text-decoration:underline!important">Bloom &amp; Brushstroke</a>.'; }
+    if (d.getAttribute("style") !== CSS) d.setAttribute("style", CSS);
+  }
+  put(); setInterval(put, 1500);
+})();
+<\/script>
 </body>
 </html>`;
 }
@@ -1733,6 +1755,18 @@ initialImg.onload = () => {
   requestAnimationFrame(frame);
 };
 initialImg.src = PHOTO_DATA_URI;
+</script>
+<script>
+(function () {
+  var CSS = "position:fixed!important;left:0!important;right:0!important;bottom:max(6px,env(safe-area-inset-bottom))!important;z-index:6!important;display:block!important;visibility:visible!important;opacity:.7!important;text-align:center!important;pointer-events:auto!important;font:400 12px/1.2 'Newsreader',Georgia,serif!important;color:#b9aea4!important;";
+  function put() {
+    var d = document.getElementById("lsCredit");
+    if (!d) { d = document.createElement("div"); d.id = "lsCredit"; document.body.appendChild(d);
+      d.innerHTML = '\u00a9 2026 <a href="https://github.com/LeagueStar" target="_blank" rel="noopener" style="color:inherit!important;text-decoration:underline!important">LeagueStar</a>. Made with <a href="https://github.com/LeagueStar/tensor-portrait-studio" target="_blank" rel="noopener" style="color:inherit!important;text-decoration:underline!important">Bloom &amp; Brushstroke</a>.'; }
+    if (d.getAttribute("style") !== CSS) d.setAttribute("style", CSS);
+  }
+  put(); setInterval(put, 1500);
+})();
 </script>
 </body>
 </html>
